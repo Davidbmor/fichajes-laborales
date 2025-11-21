@@ -1,0 +1,68 @@
+### 1️⃣ Registrar usuario (Admin o trabajador)
+POST http://localhost:4000/api/auth/register
+Content-Type: application/json
+
+{
+  "nombre": "Carlos",
+  "email": "Carlos@empresa.com",
+  "password": "123456",
+  "role": "trabajador"
+}
+
+###
+
+### 2️⃣ Login usuario
+POST http://localhost:4000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "david@gmail.com",
+  "password": "1231234"
+}
+
+###
+
+
+
+### 3️⃣ Registrar fichaje de entrada
+POST http://localhost:4000/api/fichajes
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MTU4YzU2Y2Q1MmNiNGFjOGMxMGZjMiIsImlhdCI6MTc2MzAyMDA3MCwiZXhwIjoxNzY1NjEyMDcwfQ.BZG_r9kO_dd4ihmZ2fqqCRrYhh3NX6CyM9yljbkfBII
+
+{
+  "tipo": "entrada"
+}
+
+###
+
+### 4️⃣ Registrar fichaje de salida
+POST http://localhost:4000/api/fichajes
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MTU4YzU2Y2Q1MmNiNGFjOGMxMGZjMiIsImlhdCI6MTc2MzAyMDA3MCwiZXhwIjoxNzY1NjEyMDcwfQ.BZG_r9kO_dd4ihmZ2fqqCRrYhh3NX6CyM9yljbkfBII
+
+{
+  "tipo": "salida"
+}
+
+###
+
+### 5️⃣ Registrar ausencia
+POST http://localhost:4000/api/fichajes
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MTU4YzU2Y2Q1MmNiNGFjOGMxMGZjMiIsImlhdCI6MTc2MzAyMDA3MCwiZXhwIjoxNzY1NjEyMDcwfQ.BZG_r9kO_dd4ihmZ2fqqCRrYhh3NX6CyM9yljbkfBII
+
+{
+  "tipo": "ausencia"
+}
+
+###
+
+###  Obtener todos los fichajes (solo admin)
+GET http://localhost:4000/api/fichajes
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MTU4YzU2Y2Q1MmNiNGFjOGMxMGZjMiIsImlhdCI6MTc2MzAyMDA3MCwiZXhwIjoxNzY1NjEyMDcwfQ.BZG_r9kO_dd4ihmZ2fqqCRrYhh3NX6CyM9yljbkfBII
+
+###
+
+### Obtener todos los usuarios (solo admin)
+GET http://localhost:4000/api/users
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MTU4YzU2Y2Q1MmNiNGFjOGMxMGZjMiIsImlhdCI6MTc2MzAyMDA3MCwiZXhwIjoxNzY1NjEyMDcwfQ.BZG_r9kO_dd4ihmZ2fqqCRrYhh3NX6CyM9yljbkfBII
