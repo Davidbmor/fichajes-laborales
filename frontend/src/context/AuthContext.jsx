@@ -1,22 +1,21 @@
-import React, { createContext, useState, useEffect } from "react";
+// frontend/src/context/AuthContext.jsx
+import React, { createContext, useState, useEffect, useContext } from "react";
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
-  const [loading, setLoading] = useState(true); 
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     const storedToken = localStorage.getItem("token");
-
     if (storedUser && storedToken) {
       setUser(JSON.parse(storedUser));
       setToken(storedToken);
     }
-
-    setLoading(false); 
+    setLoading(false);
   }, []);
 
   const login = (userData, jwtToken) => {
@@ -35,7 +34,10 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{ user, token, login, logout, loading }}>
-      {!loading && children} 
+      {!loading && children}
     </AuthContext.Provider>
   );
 };
+
+// hook de comodidad
+export const useAuth = () => useContext(AuthContext);

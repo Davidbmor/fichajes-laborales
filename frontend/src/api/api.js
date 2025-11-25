@@ -1,6 +1,5 @@
-// src/services/api.js
+// frontend/src/api/api.js
 import axios from "axios";
-
 const BASE_URL = "http://localhost:4000/api";
 
 export const loginUser = async (email, password) => {
@@ -31,11 +30,35 @@ export const getFichajes = async (token, query = "") => {
   return res.data;
 };
 
-
-
 export const createUser = async (token, userData) => {
   const res = await axios.post(`${BASE_URL}/users`, userData, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return res.data;
+};
+
+export const getEmpresas = async (token) => {
+  const res = await fetch("/api/empresas", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return await res.json();
+};
+
+export const crearEmpresa = async (token, body) => {
+  const res = await fetch("/api/empresas", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(body),
+  });
+  return await res.json();
+};
+
+export const eliminarEmpresa = async (token, id) => {
+  await fetch(`/api/empresas/${id}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
 };

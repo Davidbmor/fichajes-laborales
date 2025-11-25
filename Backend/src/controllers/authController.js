@@ -1,3 +1,4 @@
+// backend/controllers/authController.js
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -8,7 +9,7 @@ const generarToken = (id) => {
 
 export const register = async (req, res) => {
   try {
-    const { nombre, email, password, role } = req.body;
+    const { nombre, apellidos, email, password, role, imagenPerfil, empresa } = req.body;
 
     const existeUsuario = await User.findOne({ email });
     if (existeUsuario) return res.status(400).json({ message: "Usuario ya existe" });
@@ -16,23 +17,48 @@ export const register = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashed = await bcrypt.hash(password, salt);
 
-    const user = await User.create({ nombre, email, password: hashed, role });
-    res.status(201).json(user);
+    const user = await User.create({
+      nombre,
+      apellidos,
+      email,
+      password: hashed,
+      role,
+      imagenPerfil,
+      empresa: empresa || null,
+    });
+
+    const userSafe = await User.findById(user._id).select("-password").populate("empresa", "nombre imagenUrl");
+
+    res.status(201).json({
+      user: userSafe,
+      token: generarToken(user._id),
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
 export const login = async (req, res) => {
-  const { email, password } = req.body;
-  const user = await User.findOne({ email });
-  if (!user) return res.status(400).json({ message: "Usuario no encontrado" });
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email }).select("+password").populate("empresa", "nombre imagenUrl");
+    if (!user) return res.status(400).json({ message: "Usuario no encontrado" });
 
-  const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) return res.status(400).json({ message: "Contraseña incorrecta" });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ message: "Contraseña incorrecta" });
 
-  res.json({
-    user,
-    token: generarToken(user._id),
-  });
+    const userSafe = await User.findById(user._id).select("-password").populate("empresa", "nombre imagenUrl");
+
+    res.json({
+      user: {
+        _id: user._id,
+        nombre: user.nombre,
+        email: user.email,
+        role: user.role,
+      },
+      token: generarToken(user._id),
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 };

@@ -15,8 +15,17 @@ export default function Login() {
     e.preventDefault();
     try {
       const data = await loginUser(email, password);
+
       login(data.user, data.token);
-      navigate(data.user.role === "admin" ? "/admin" : "/trabajador");
+
+      // Luego redirigir
+      if (data.user.role === "global_admin") {
+        navigate("/global-admin");
+      } else if (data.user.role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/trabajador");
+      }
     } catch (err) {
       setMensaje(err.response?.data?.message || "Error al iniciar sesión");
     }

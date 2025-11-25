@@ -1,25 +1,44 @@
-import React from 'react';
-import { Routes, Route } from 'react-router-dom';
-import Login from '../pages/Login.jsx';
-import Register from '../pages/Register.jsx';
-import Fichar from '../pages/Fichar.jsx';
-import AdminDashboard from '../pages/DashboardAdmin.jsx';
-import NotFound from '../pages/NotFound.jsx';
-import PrivateRoute from '../components/PrivateRoute.jsx';
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import EmpresasPage from "../components/EmpresasSection";
+import Dashboard from "../pages/Dashboard";
+import UsuariosPage from "../pages/UsuariosPage";
+import FichajesSection from "../components/FichajesSection";
+import { useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
 
 export default function AppRouter() {
+  const { user } = useContext(AuthContext);
+
   return (
-    <Routes>
-      <Route path="/" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/fichajes" element={<FichajesSection />} />
 
-      {/* Rutas protegidas */}
-      <Route element={<PrivateRoute />}>
-        <Route path="/fichar" element={<Fichar />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-      </Route>
+        {/* SOLO admins global y admins normales */}
+        <Route
+          path="/usuarios"
+          element={
+            user?.role === "admin" || user?.role === "global_admin" ? (
+              <UsuariosPage />
+            ) : (
+              <Navigate to="/" />
+            )
+          }
+        />
 
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+        {/* SOLO admin global */}
+        <Route
+          path="/empresas"
+          element={
+            user?.role === "global_admin" ? (
+              <EmpresasPage />
+            ) : (
+              <Navigate to="/" />
+            )
+          }
+        />
+      </Routes>
+    </BrowserRouter>
   );
 }

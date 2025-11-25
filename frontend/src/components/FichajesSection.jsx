@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useContext } from "react";
-import { AuthContext } from "../context/AuthContext";
+// frontend/src/components/FichajesSection.jsx
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../context/AuthContext.jsx";
 import { getFichajes, getUsers } from "../api/api";
 import * as XLSX from "xlsx";
 
 export default function FichajesSection() {
-  const { token } = useContext(AuthContext);
+  const { token } = useAuth();
   const [fichajes, setFichajes] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [fecha, setFecha] = useState("");
@@ -12,26 +13,18 @@ export default function FichajesSection() {
   const [usuarioFiltro, setUsuarioFiltro] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Cargar lista de usuarios (solo trabajadores)
   useEffect(() => {
     const cargarUsuarios = async () => {
       try {
         const data = await getUsers(token);
-        // Excluir admins
-        const trabajadores = data.filter((u) => u.role !== "admin");
+        const trabajadores = data.filter((u) => u.role !== "global_admin"); // exclude globals if desired
         setUsuarios(trabajadores);
       } catch (err) {
-        console.error("Error cargando usuarios", err);
+        console.error(err);
       }
     };
-    cargarUsuarios();
+    if (token) cargarUsuarios();
   }, [token]);
-
-  // Cargar fichajes cuando cambian fecha, tipo de filtro o usuario
-  useEffect(() => {
-    cargarFichajes();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fecha, tipoFiltro, usuarioFiltro]);
 
   const cargarFichajes = async () => {
     try {
@@ -42,41 +35,41 @@ export default function FichajesSection() {
         const d = new Date(fecha);
         params.append("anio", d.getFullYear());
         params.append("mes", d.getMonth() + 1);
-
-        if (tipoFiltro === "dia") {
-          params.append("dia", d.getDate());
-        }
-
-        
+        if (tipoFiltro === "dia") params.append("dia", d.getDate());
       }
 
-      if (usuarioFiltro) {
-        params.append("userId", usuarioFiltro);
-      }
+      if (usuarioFiltro) params.append("usuario", usuarioFiltro);
 
-      const query = `?${params.toString()}`;
-
+      const query = params.toString() ? `?${params.toString()}` : "";
       const data = await getFichajes(token, query);
       setFichajes(data);
     } catch (err) {
-      console.error("Error cargando fichajes", err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    carregarOnDeps(); /* avoid eslint complaining */
+  }, [fecha, tipoFiltro, usuarioFiltro]);
+
+  const carregarOnDeps = () => {
+    cargarFichajes();
+  };
+
   const exportarExcel = () => {
     if (fichajes.length === 0) return alert("No hay datos para exportar.");
-
     const worksheet = XLSX.utils.json_to_sheet(
       fichajes.map((f) => ({
-        Nombre: f.userId?.nombre || "Desconocido",
+        Nombre:
+          `${f.userId?.nombre || ""} ${f.userId?.apellidos || ""}`.trim() ||
+          "Desconocido",
         Email: f.userId?.email || "—",
         Fecha: new Date(f.fecha).toLocaleString(),
         Tipo: f.tipo,
       }))
     );
-
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Fichajes");
     XLSX.writeFile(workbook, `fichajes_${tipoFiltro}_${fecha || "todos"}.xlsx`);
@@ -86,12 +79,11 @@ export default function FichajesSection() {
     <div className="w-full p-6 bg-white shadow-md rounded-xl">
       <h2 className="text-xl font-bold mb-4">Fichajes</h2>
 
-      {/* FILTROS */}
       <div className="flex flex-wrap gap-4 mb-4">
         <select
           value={tipoFiltro}
           onChange={(e) => setTipoFiltro(e.target.value)}
-          className="border border-gray-300 rounded-lg p-2"
+          className="border p-2 rounded"
         >
           <option value="dia">Por día</option>
           <option value="mes">Por mes</option>
@@ -102,72 +94,62 @@ export default function FichajesSection() {
           type="date"
           value={fecha}
           onChange={(e) => setFecha(e.target.value)}
-          className="border border-gray-300 rounded-lg p-2"
+          className="border p-2 rounded"
         />
 
         <select
           value={usuarioFiltro}
           onChange={(e) => setUsuarioFiltro(e.target.value)}
-          className="border border-gray-300 rounded-lg p-2"
+          className="border p-2 rounded"
         >
           <option value="">Todos los trabajadores</option>
           {usuarios.map((u) => (
             <option key={u._id} value={u._id}>
-              {u.nombre} ({u.email})
+              {u.nombre} {u.apellidos} ({u.email})
             </option>
           ))}
         </select>
 
         <button
           onClick={cargarFichajes}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
+          className="bg-indigo-600 text-white px-4 py-2 rounded"
         >
           Buscar
         </button>
-
         <button
           onClick={exportarExcel}
-          className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
+          className="bg-green-600 text-white px-4 py-2 rounded"
         >
           📤 Exportar Excel
         </button>
       </div>
 
-      {/* TABLA DE FICHAJES */}
       <div className="overflow-x-auto">
         {loading ? (
-          <p className="text-gray-600 text-center">Cargando fichajes...</p>
+          <p>Cargando...</p>
         ) : fichajes.length === 0 ? (
-          <p className="text-gray-600 text-center">
-            No hay fichajes para mostrar.
-          </p>
+          <p>No hay fichajes</p>
         ) : (
-          <table className="w-full text-left border-collapse">
+          <table className="w-full">
             <thead className="bg-gray-100">
               <tr>
-                <th className="p-3 border-b">Nombre</th>
-                <th className="p-3 border-b">Email</th>
-                <th className="p-3 border-b">Fecha</th>
-                <th className="p-3 border-b">Tipo</th>
+                <th className="p-3">Nombre</th>
+                <th className="p-3">Email</th>
+                <th className="p-3">Fecha</th>
+                <th className="p-3">Tipo</th>
               </tr>
             </thead>
             <tbody>
               {fichajes.map((f) => (
-                <tr key={f._id} className="border-b hover:bg-gray-50">
-                  <td className="p-3">{f.userId?.nombre}</td>
+                <tr key={f._id} className="border-b">
+                  <td className="p-3">
+                    {f.userId
+                      ? `${f.userId.nombre} ${f.userId.apellidos}`
+                      : "Desconocido"}
+                  </td>
                   <td className="p-3">{f.userId?.email}</td>
                   <td className="p-3">{new Date(f.fecha).toLocaleString()}</td>
-                  <td
-                    className={`p-3 font-semibold ${
-                      f.tipo === "entrada"
-                        ? "text-green-600"
-                        : f.tipo === "salida"
-                        ? "text-red-600"
-                        : "text-yellow-600"
-                    }`}
-                  >
-                    {f.tipo}
-                  </td>
+                  <td className="p-3">{f.tipo}</td>
                 </tr>
               ))}
             </tbody>

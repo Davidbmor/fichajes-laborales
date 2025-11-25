@@ -1,3 +1,4 @@
+// backend/models/Fichaje.js
 import mongoose from "mongoose";
 
 const fichajeSchema = new mongoose.Schema({

@@ -1,108 +1,145 @@
-import React, { useState, useContext } from "react";
-import { AuthContext } from "../context/AuthContext";
+// frontend/src/components/CreateUserForm.jsx
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../context/AuthContext.jsx";
+import { getEmpresas, createUser } from "../api/api";
 
-export default function CreateUserForm() {
-  const { token } = useContext(AuthContext);
-
+export default function CreateUserForm({ onCreated }) {
+  const { token, user } = useAuth();
+  const [empresas, setEmpresas] = useState([]);
   const [formData, setFormData] = useState({
     nombre: "",
+    apellidos: "",
     email: "",
     password: "",
     role: "trabajador",
+    imagenPerfil: "",
+    empresa: "",
   });
-
   const [mensaje, setMensaje] = useState("");
 
+  useEffect(() => {
+    const cargar = async () => {
+      try {
+        const data = await getEmpresas(token);
+        setEmpresas(data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    if (token) cargar();
+  }, [token]);
+
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    setFormData((s) => ({ ...s, [e.target.name]: e.target.value }));
   };
 
-  const crearUsuario = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setMensaje("");
-
     try {
-      const res = await fetch("http://localhost:4000/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(formData),
+      // Si el creador es admin normal, no permitir elegir empresa distinta
+      let payload = { ...formData };
+      if (user.role === "admin") {
+        payload.empresa = user.empresa?._id || user.empresa || null;
+      }
+      const res = await createUser(token, payload);
+      setMensaje("Usuario creado!");
+      setFormData({
+        nombre: "",
+        apellidos: "",
+        email: "",
+        password: "",
+        role: "trabajador",
+        imagenPerfil: "",
+        empresa: "",
       });
-
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.message || "Error creando usuario");
-
-      setMensaje("Usuario creado correctamente!");
-      setFormData({ nombre: "", email: "", password: "", role: "trabajador" });
+      if (onCreated) onCreated(res);
     } catch (err) {
-      setMensaje(err.message);
+      setMensaje(err.response?.data?.message || err.message);
     }
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md">
-      <h2 className="text-xl font-bold mb-4">Crear nuevo usuario</h2>
+    <form
+      onSubmit={handleSubmit}
+      className="bg-white p-6 rounded shadow-md w-full max-w-md"
+    >
+      <h3 className="text-lg font-bold mb-4">Crear usuario</h3>
+      {mensaje && <p className="text-sm mb-2">{mensaje}</p>}
+      <input
+        name="nombre"
+        value={formData.nombre}
+        onChange={handleChange}
+        placeholder="Nombre"
+        required
+        className="mb-2 p-2 border rounded w-full"
+      />
+      <input
+        name="apellidos"
+        value={formData.apellidos}
+        onChange={handleChange}
+        placeholder="Apellidos"
+        required
+        className="mb-2 p-2 border rounded w-full"
+      />
+      <input
+        name="email"
+        value={formData.email}
+        onChange={handleChange}
+        placeholder="Email"
+        type="email"
+        required
+        className="mb-2 p-2 border rounded w-full"
+      />
+      <input
+        name="password"
+        value={formData.password}
+        onChange={handleChange}
+        placeholder="Contraseña"
+        type="password"
+        required
+        className="mb-2 p-2 border rounded w-full"
+      />
+      <input
+        name="imagenPerfil"
+        value={formData.imagenPerfil}
+        onChange={handleChange}
+        placeholder="URL imagen perfil (opcional)"
+        className="mb-2 p-2 border rounded w-full"
+      />
 
-      <form onSubmit={crearUsuario} className="flex flex-col gap-4">
-        <input
-          name="nombre"
-          type="text"
-          placeholder="Nombre"
-          value={formData.nombre}
-          onChange={handleChange}
-          className="border p-2 rounded"
-          required
-        />
-
-        <input
-          name="email"
-          type="email"
-          placeholder="Correo"
-          value={formData.email}
-          onChange={handleChange}
-          className="border p-2 rounded"
-          required
-        />
-
-        <input
-          name="password"
-          type="password"
-          placeholder="Contraseña"
-          value={formData.password}
-          onChange={handleChange}
-          className="border p-2 rounded"
-          required
-        />
-
+      {/* Empresa: solo visible para global_admin; admin tendrá su propia empresa forzada en backend */}
+      {user?.role === "global_admin" && (
         <select
-          name="role"
-          value={formData.role}
+          name="empresa"
+          value={formData.empresa}
           onChange={handleChange}
-          className="border p-2 rounded"
+          className="mb-2 p-2 border rounded w-full"
         >
-          <option value="trabajador">Trabajador</option>
-          <option value="admin">Administrador</option>
+          <option value="">Sin empresa</option>
+          {empresas.map((e) => (
+            <option key={e._id} value={e._id}>
+              {e.nombre}
+            </option>
+          ))}
         </select>
+      )}
 
-        <button
-          type="submit"
-          className="bg-green-600 text-white py-2 rounded hover:bg-green-700"
-        >
-          Crear usuario
-        </button>
+      <select
+        name="role"
+        value={formData.role}
+        onChange={handleChange}
+        className="mb-2 p-2 border rounded w-full"
+      >
+        <option value="trabajador">Trabajador</option>
+        <option value="admin">Admin (empresa)</option>
+      </select>
 
-        {mensaje && (
-          <p className="text-center text-sm font-semibold text-blue-600">
-            {mensaje}
-          </p>
-        )}
-      </form>
-    </div>
+      <button
+        type="submit"
+        className="bg-green-600 text-white px-4 py-2 rounded"
+      >
+        Crear
+      </button>
+    </form>
   );
 }

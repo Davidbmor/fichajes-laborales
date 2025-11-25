@@ -1,3 +1,4 @@
+// backend/controllers/fichajeController.js
 import Fichaje from "../models/Fichaje.js";
 
 export const registrarFichaje = async (req, res) => {
@@ -10,56 +11,50 @@ export const registrarFichaje = async (req, res) => {
   }
 };
 
-export const obtenerFichajes = async (req, res) => {
-  try {
-    const { fecha, usuario, tipo } = req.query;
-
-    let filtro = {};
-
-    if (fecha) {
-      const inicio = new Date(fecha);
-      const fin = new Date(fecha);
-      fin.setHours(23, 59, 59);
-      filtro.fecha = { $gte: inicio, $lte: fin };
-    }
-
-    if (usuario) filtro.userId = usuario; 
-    if (tipo) filtro.tipo = tipo;
-
-    const fichajes = await Fichaje
-      .find(filtro)
-      .populate("userId", "nombre email");
-
-    res.json(fichajes);
-  } catch (err) {
-    res.status(500).json({ message: "Error al obtener fichajes" });
-  }
-};
-
-
-
-
+// Endpoint: GET /api/fichajes?anio=...&mes=...&dia=...&usuario=...
 export const obtenerFichajesFiltrados = async (req, res) => {
   try {
-    const { dia, mes, anio } = req.query;
+    const { dia, mes, anio, usuario } = req.query;
     let filtro = {};
 
-    if (anio) {
-      const start = new Date(anio, (mes ? mes - 1 : 0), dia ? dia : 1);
-      let end;
-
-      if (dia) {
-        end = new Date(anio, (mes ? mes - 1 : 0), Number(dia) + 1);
-      } else if (mes) {
-        end = new Date(anio, mes, 1);
-      } else {
-        end = new Date(Number(anio) + 1, 0, 1);
-      }
-
-      filtro.fecha = { $gte: start, $lt: end };
+    // Si es admin normal => solo fichajes de su empresa (filtrando por userId.company)
+    // Filtro por usuario si llega
+    if (usuario) {
+      filtro.userId = usuario;
     }
 
-    const fichajes = await Fichaje.find(filtro).populate("userId", "nombre email");
+    // Filtrado por fecha (anio/mes/dia)
+    if (anio) {
+      const year = parseInt(anio);
+      const month = mes ? parseInt(mes) - 1 : null;
+      const day = dia ? parseInt(dia) : null;
+
+      if (year && month !== null && day) {
+        filtro.fecha = {
+          $gte: new Date(year, month, day, 0, 0, 0),
+          $lte: new Date(year, month, day, 23, 59, 59),
+        };
+      } else if (year && month !== null) {
+        filtro.fecha = {
+          $gte: new Date(year, month, 1, 0, 0, 0),
+          $lte: new Date(year, month + 1, 0, 23, 59, 59),
+        };
+      } else if (year) {
+        filtro.fecha = {
+          $gte: new Date(year, 0, 1, 0, 0, 0),
+          $lte: new Date(year, 11, 31, 23, 59, 59),
+        };
+      }
+    }
+
+    // Si el usuario que pide es admin normal, limitar resultados a su empresa
+    // Hacemos la query y luego filtramos por populate.match o manualmente:
+    let fichajes = await Fichaje.find(filtro).populate("userId", "nombre apellidos email empresa");
+
+    if (req.user.role === "admin") {
+      const empresaId = String(req.user.empresa);
+      fichajes = fichajes.filter((f) => f.userId && String(f.userId.empresa) === empresaId);
+    }
 
     res.json(fichajes);
   } catch (error) {

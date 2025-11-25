@@ -1,21 +1,28 @@
 import { Routes, Route } from "react-router-dom";
 import DashboardAdmin from "./pages/DashboardAdmin";
 import DashboardTrabajador from "./pages/DashBoardTrabajador";
+import DashboardGlobalAdmin from "./pages/DashboardGlobalAdmin";
 import Login from "./pages/Login";
-import React from "react";
-
 import ProtectedRoute from "./components/ProtectedRoute";
 
-function App() {
-
+export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
 
       <Route
+        path="/global-admin"
+        element={
+          <ProtectedRoute roles={["global_admin"]}>
+            <DashboardGlobalAdmin />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/admin"
         element={
-          <ProtectedRoute rol="admin">
+          <ProtectedRoute roles={["admin"]}>
             <DashboardAdmin />
           </ProtectedRoute>
         }
@@ -24,7 +31,7 @@ function App() {
       <Route
         path="/trabajador"
         element={
-          <ProtectedRoute rol="trabajador">
+          <ProtectedRoute roles={["trabajador"]}>
             <DashboardTrabajador />
           </ProtectedRoute>
         }
@@ -34,5 +41,3 @@ function App() {
     </Routes>
   );
 }
-
-export default App;
