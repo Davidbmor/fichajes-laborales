@@ -4,11 +4,21 @@ import DashboardTrabajador from "./pages/DashBoardTrabajador";
 import DashboardGlobalAdmin from "./pages/DashboardGlobalAdmin";
 import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
+import EmpresaDetail from "./pages/EmpresaDetail";
 
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+
+      <Route
+        path="/empresas/:id"
+        element={
+          <ProtectedRoute roles={["global_admin"]}>
+            <EmpresaDetail />
+          </ProtectedRoute>
+        }
+      />
 
       <Route
         path="/global-admin"

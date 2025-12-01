@@ -1,5 +1,7 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
+import fs from "fs/promises";
+import path from "path";
 
 export const obtenerUsuarios = async (req, res) => {
   try {
@@ -25,8 +27,17 @@ export const crearUsuario = async (req, res) => {
   try {
     const { nombre, apellidos, email, password, role, empresa } = req.body;
 
-    let empresaAsignada = empresa;
-    if (req.user.role === "admin") empresaAsignada = req.user.empresa;
+    let empresaAsignada = empresa || null;
+    
+    // Si es admin normal, forzar su propia empresa
+    if (req.user.role === "admin") {
+      empresaAsignada = req.user.empresa;
+    }
+    
+    // Si el nuevo usuario es global_admin, NO asignar empresa
+    if (role === "global_admin") {
+      empresaAsignada = null;
+    }
 
     // DEBUG ampliado: comprobar qué llega exactamente
     console.log("crearUsuario - Content-Type:", req.headers["content-type"]);
@@ -113,5 +124,36 @@ export const actualizarUsuario = async (req, res) => {
 
   } catch (err) {
     res.status(500).json({ message: "Error actualizando usuario", error: err.message });
+  }
+};
+
+// Nuevo: eliminar usuario
+export const eliminarUsuario = async (req, res) => {
+  try {
+    const usuario = await User.findById(req.params.id);
+    if (!usuario) return res.status(404).json({ message: "Usuario no encontrado" });
+
+    // opcional: impedir borrar global_admin desde UI si se desea
+    if (usuario.role === "global_admin") {
+      return res.status(403).json({ message: "No se puede eliminar un admin global" });
+    }
+
+    // borrar fichero de imagen si es local (ruta que comienza por /uploads)
+    const imagen = usuario.imagenPerfil;
+    if (imagen && typeof imagen === "string" && imagen.startsWith("/uploads")) {
+      try {
+        const rel = imagen.replace(/^\//, ""); // "uploads/users/xxx"
+        const filePath = path.join(process.cwd(), rel);
+        await fs.unlink(filePath);
+      } catch (err) {
+        // no bloquear la eliminación si el fichero no existe, solo loguear
+        console.warn("No se pudo borrar imagen de usuario:", err.message);
+      }
+    }
+
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ message: "Usuario eliminado" });
+  } catch (err) {
+    res.status(500).json({ message: "Error eliminando usuario", error: err.message });
   }
 };

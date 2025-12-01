@@ -39,15 +39,26 @@ export const createUser = async (token,userData) => {
   const res = await axios.post(`${BASE_URL}/users`, userData, {
     headers: {
       Authorization: `Bearer ${token}`,
-      
-      
     },
   });
   return res.data;
 };
 
+// Actualizar usuario (FORM DATA)
+export const updateUser = async (token, id, formData) => {
+  const res = await axios.put(`${BASE_URL}/users/${id}`, formData, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
+};
 
-
+// Eliminar usuario
+export const deleteUser = async (token, id) => {
+  const res = await axios.delete(`${BASE_URL}/users/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
+};
 
 // ---------------------- EMPRESAS ----------------------
 

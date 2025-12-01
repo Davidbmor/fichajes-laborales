@@ -1,5 +1,6 @@
 // backend/controllers/fichajeController.js
 import Fichaje from "../models/Fichaje.js";
+import User from "../models/User.js";
 
 export const registrarFichaje = async (req, res) => {
   try {
@@ -11,20 +12,18 @@ export const registrarFichaje = async (req, res) => {
   }
 };
 
-// Endpoint: GET /api/fichajes?anio=...&mes=...&dia=...&usuario=...
+// Endpoint: GET /api/fichajes?from=YYYY-MM-DD&to=YYYY-MM-DD&anio=&mes=&dia=&usuarios=csv&empresa=
 export const obtenerFichajesFiltrados = async (req, res) => {
   try {
-    const { dia, mes, anio, usuario } = req.query;
+    const { dia, mes, anio, usuario, usuarios, from, to, empresa } = req.query;
     let filtro = {};
 
-    // Si es admin normal => solo fichajes de su empresa (filtrando por userId.company)
-    // Filtro por usuario si llega
-    if (usuario) {
-      filtro.userId = usuario;
-    }
-
-    // Filtrado por fecha (anio/mes/dia)
-    if (anio) {
+    // --- Fechas: prioridad from/to, si no hay parámetros usar día actual ---
+    if (from || to) {
+      const gte = from ? new Date(from) : new Date(0);
+      const lte = to ? new Date(new Date(to).setHours(23, 59, 59, 999)) : new Date();
+      filtro.fecha = { $gte: gte, $lte: lte };
+    } else if (anio) {
       const year = parseInt(anio);
       const month = mes ? parseInt(mes) - 1 : null;
       const day = dia ? parseInt(dia) : null;
@@ -45,16 +44,41 @@ export const obtenerFichajesFiltrados = async (req, res) => {
           $lte: new Date(year, 11, 31, 23, 59, 59),
         };
       }
+    } else {
+      // por defecto: hoy
+      const hoy = new Date();
+      const inicio = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 0, 0, 0);
+      const fin = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59, 999);
+      filtro.fecha = { $gte: inicio, $lte: fin };
     }
 
-    // Si el usuario que pide es admin normal, limitar resultados a su empresa
-    // Hacemos la query y luego filtramos por populate.match o manualmente:
-    let fichajes = await Fichaje.find(filtro).populate("userId", "nombre apellidos email empresa");
+    // --- Usuarios / grupos ---
+    // prioridad: 'usuarios' param, luego 'usuario' legacy, luego 'empresa' param, luego role del requester
+    const usuariosParam = (usuarios || usuario || "").toString().trim();
 
-    if (req.user.role === "admin") {
-      const empresaId = String(req.user.empresa);
-      fichajes = fichajes.filter((f) => f.userId && String(f.userId.empresa) === empresaId);
+    // Si piden filtrar por empresa (grupo)
+    if (empresa) {
+      // obtener ids de usuarios de esa empresa
+      const usersCompany = await User.find({ empresa }).select("_id");
+      const ids = usersCompany.map((u) => u._id);
+      filtro.userId = { $in: ids };
+    } else if (usuariosParam && usuariosParam !== "all") {
+      const arr = usuariosParam.split(",").map((s) => s.trim()).filter(Boolean);
+      if (arr.length === 1) filtro.userId = arr[0];
+      else filtro.userId = { $in: arr };
+    } else {
+      // usuariosParam es "all" o vacío -> aplicar restricción según rol del requester
+      if (req.user.role === "admin") {
+        // limitar a todos los usuarios de la empresa del admin
+        const usersCompany = await User.find({ empresa: req.user.empresa }).select("_id");
+        const ids = usersCompany.map((u) => u._id);
+        filtro.userId = { $in: ids };
+      }
+      // si es global_admin y no se especificó nada, dejamos sin filtro de usuario (todos)
     }
+
+    // Ejecutar consulta con populate
+    const fichajes = await Fichaje.find(filtro).populate("userId", "nombre apellidos email empresa").sort({ fecha: 1 });
 
     res.json(fichajes);
   } catch (error) {

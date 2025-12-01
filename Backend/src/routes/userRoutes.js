@@ -2,7 +2,8 @@ import express from "express";
 import {
   obtenerUsuarios,
   actualizarUsuario,
-  crearUsuario
+  crearUsuario,
+  eliminarUsuario
 } from "../controllers/userController.js";
 
 import { protect } from "../middlewares/authmiddleware.js";
@@ -13,7 +14,7 @@ const router = express.Router();
 
 router.get("/", protect, obtenerUsuarios);
 
-// Mantener fields en la PUT (edición) porque aceptas ambos nombres
+// PUT: requiere ser admin o global_admin
 router.put(
   "/:id",
   protect,
@@ -25,12 +26,21 @@ router.put(
   actualizarUsuario
 );
 
-// Cambiar POST a single("imagen") — el frontend envía "imagen"
+// POST: admin de empresa O global_admin pueden crear
 router.post(
   "/",
   protect,
-  uploadUser.single("imagen"), // <-- changed: usar single para poblar req.file
+  esAdminEmpresa,
+  uploadUser.single("imagen"),
   crearUsuario
+);
+
+// DELETE: requiere ser admin o global_admin
+router.delete(
+  "/:id",
+  protect,
+  esAdminEmpresa,
+  eliminarUsuario
 );
 
 export default router;

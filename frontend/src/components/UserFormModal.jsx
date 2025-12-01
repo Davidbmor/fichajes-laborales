@@ -1,9 +1,9 @@
 // frontend/src/components/UserFormModal.jsx
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
-import { getEmpresas, createUser } from "../api/api";
+import { getEmpresas, createUser, updateUser } from "../api/api";
 
-export default function UserFormModal({ user = {}, onClose, onSaved }) {
+export default function UserFormModal({ user = {}, onClose, onSaved, empresaId = null }) {
   const { token, user: me } = useAuth();
   const isEdit = !!user._id;
 
@@ -15,7 +15,7 @@ export default function UserFormModal({ user = {}, onClose, onSaved }) {
     email: user.email || "",
     password: "",
     role: user.role || "trabajador",
-    empresa: user.empresa?._id || "",
+    empresa: user.empresa?._id || empresaId || "",
     imagenPerfil: null,
   });
 
@@ -29,7 +29,31 @@ export default function UserFormModal({ user = {}, onClose, onSaved }) {
       }
     };
     load();
+    // eslint-disable-next-line
   }, [token]);
+
+  useEffect(() => {
+    // cuando cambia el prop user o empresaId, actualizar el form
+    setForm((s) => {
+      const newForm = {
+        ...s,
+        nombre: user.nombre || "",
+        apellidos: user.apellidos || "",
+        email: user.email || "",
+        role: user.role || "trabajador",
+        empresa: user.empresa?._id || empresaId || "",
+        imagenPerfil: null,
+      };
+
+      // Si el rol es global_admin, limpiar empresa
+      if (newForm.role === "global_admin") {
+        newForm.empresa = "";
+      }
+
+      return newForm;
+    });
+    // eslint-disable-next-line
+  }, [user, empresaId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -41,12 +65,19 @@ export default function UserFormModal({ user = {}, onClose, onSaved }) {
         : fd.append(key, val)
     );
 
-    // Si es admin normal, forzar empresa
+    // Si el creador es admin normal, forzar empresa
     if (me.role === "admin") {
       fd.set("empresa", me.empresa?._id || me.empresa);
     }
 
-    await createUser(token, fd);
+    // Si estamos en vista de empresa y hay empresaId, forzarlo
+    if (empresaId) fd.set("empresa", empresaId);
+
+    if (isEdit) {
+      await updateUser(token, user._id, fd);
+    } else {
+      await createUser(token, fd);
+    }
 
     onSaved && onSaved();
     onClose();
@@ -95,12 +126,13 @@ export default function UserFormModal({ user = {}, onClose, onSaved }) {
             />
           )}
 
-          {/* Empresa SOLO visible para global_admin */}
-          {me.role === "global_admin" && (
+          {/* Empresa SOLO visible para global_admin SI NO ES global_admin el que se crea */}
+          {me.role === "global_admin" && form.role !== "global_admin" && (
             <select
               value={form.empresa}
               onChange={(e) => setForm({ ...form, empresa: e.target.value })}
               className="p-2 border rounded"
+              required
             >
               <option value="">Selecciona empresa</option>
               {empresas.map((e) => (
