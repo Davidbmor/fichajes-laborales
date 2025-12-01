@@ -1,25 +1,21 @@
 // frontend/src/api/api.js
 import axios from "axios";
+
 const BASE_URL = "http://localhost:4000/api";
 
+// ---------------------- AUTENTICACIÓN ----------------------
 export const loginUser = async (email, password) => {
   const res = await axios.post(`${BASE_URL}/auth/login`, { email, password });
   return res.data;
 };
 
+// ---------------------- FICHAJES ----------------------
 export const fichar = async (token, tipo) => {
   const res = await axios.post(
     `${BASE_URL}/fichajes`,
     { tipo },
     { headers: { Authorization: `Bearer ${token}` } }
   );
-  return res.data;
-};
-
-export const getUsers = async (token) => {
-  const res = await axios.get(`${BASE_URL}/users`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
   return res.data;
 };
 
@@ -30,35 +26,64 @@ export const getFichajes = async (token, query = "") => {
   return res.data;
 };
 
-export const createUser = async (token, userData) => {
-  const res = await axios.post(`${BASE_URL}/users`, userData, {
+// ---------------------- USUARIOS ----------------------
+export const getUsers = async (token) => {
+  const res = await axios.get(`${BASE_URL}/users`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return res.data;
 };
 
+// Crear usuario con imagen (FORM DATA)
+export const createUser = async (token,userData) => {
+  const res = await axios.post(`${BASE_URL}/users`, userData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      
+      
+    },
+  });
+  return res.data;
+};
+
+
+
+
+// ---------------------- EMPRESAS ----------------------
+
+// Obtener todas las empresas
 export const getEmpresas = async (token) => {
-  const res = await fetch("/api/empresas", {
+  const res = await axios.get(`${BASE_URL}/empresas`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  return await res.json();
+  return res.data;
 };
 
-export const crearEmpresa = async (token, body) => {
-  const res = await fetch("/api/empresas", {
-    method: "POST",
+// Crear empresa con imagen (FORM DATA)
+export const crearEmpresa = async (token, formData) => {
+  const res = await axios.post(`${BASE_URL}/empresas`, formData, {
     headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`
+      Authorization: `Bearer ${token}`,
+      // "Content-Type": "multipart/form-data", // <-- remove this
     },
-    body: JSON.stringify(body),
   });
-  return await res.json();
+  return res.data;
 };
 
+// Actualizar empresa (FORM DATA)
+export const actualizarEmpresa = async (token, id, formData) => {
+  const res = await axios.put(`${BASE_URL}/empresas/${id}`, formData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      // "Content-Type": "multipart/form-data", // <-- remove this
+    },
+  });
+  return res.data;
+};
+
+// Eliminar empresa
 export const eliminarEmpresa = async (token, id) => {
-  await fetch(`/api/empresas/${id}`, {
-    method: "DELETE",
+  return axios.delete(`${BASE_URL}/empresas/${id}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 };

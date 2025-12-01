@@ -1,61 +1,55 @@
 // frontend/src/components/UserFormModal.jsx
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
-import { getEmpresas } from "../api/api";
+import { getEmpresas, createUser } from "../api/api";
 
 export default function UserFormModal({ user = {}, onClose, onSaved }) {
   const { token, user: me } = useAuth();
   const isEdit = !!user._id;
+
   const [empresas, setEmpresas] = useState([]);
+
   const [form, setForm] = useState({
     nombre: user.nombre || "",
     apellidos: user.apellidos || "",
     email: user.email || "",
     password: "",
     role: user.role || "trabajador",
-    imagenPerfil: user.imagenPerfil || "",
-    empresa: user.empresa?._id || user.empresa || "",
+    empresa: user.empresa?._id || "",
+    imagenPerfil: null,
   });
 
   useEffect(() => {
     const load = async () => {
       try {
-        const data = await getEmpresas(token);
-        setEmpresas(data);
+        const data = await getEmpresas(token); // ← YA ES UN ARRAY
+        setEmpresas(data); // ← OK
       } catch (err) {
         console.error(err);
       }
     };
-    if (token) load();
+    load();
   }, [token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      const url = isEdit
-        ? `http://localhost:4000/api/users/${user._id}`
-        : "http://localhost:4000/api/users";
-      const method = isEdit ? "PUT" : "POST";
 
-      // Si editor es admin (no global), forzar empresa
-      if (me.role === "admin") {
-        form.empresa = me.empresa?._id || me.empresa || null;
-      }
+    const fd = new FormData();
+    Object.entries(form).forEach(([key, val]) =>
+      key === "imagenPerfil"
+        ? val && fd.append("imagen", val)
+        : fd.append(key, val)
+    );
 
-      await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(form),
-      });
-
-      if (onSaved) onSaved();
-      onClose();
-    } catch (err) {
-      console.error(err);
+    // Si es admin normal, forzar empresa
+    if (me.role === "admin") {
+      fd.set("empresa", me.empresa?._id || me.empresa);
     }
+
+    await createUser(token, fd);
+
+    onSaved && onSaved();
+    onClose();
   };
 
   return (
@@ -64,6 +58,7 @@ export default function UserFormModal({ user = {}, onClose, onSaved }) {
         <h3 className="text-lg font-bold mb-4">
           {isEdit ? "Editar usuario" : "Crear usuario"}
         </h3>
+
         <form onSubmit={handleSubmit} className="flex flex-col gap-2">
           <input
             value={form.nombre}
@@ -72,6 +67,7 @@ export default function UserFormModal({ user = {}, onClose, onSaved }) {
             required
             className="p-2 border rounded"
           />
+
           <input
             value={form.apellidos}
             onChange={(e) => setForm({ ...form, apellidos: e.target.value })}
@@ -79,6 +75,7 @@ export default function UserFormModal({ user = {}, onClose, onSaved }) {
             required
             className="p-2 border rounded"
           />
+
           <input
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -86,29 +83,26 @@ export default function UserFormModal({ user = {}, onClose, onSaved }) {
             required
             className="p-2 border rounded"
           />
+
           {!isEdit && (
             <input
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
-              placeholder="Contraseña"
               type="password"
+              placeholder="Contraseña"
               required
               className="p-2 border rounded"
             />
           )}
-          <input
-            value={form.imagenPerfil}
-            onChange={(e) => setForm({ ...form, imagenPerfil: e.target.value })}
-            placeholder="URL imagen perfil"
-            className="p-2 border rounded"
-          />
+
+          {/* Empresa SOLO visible para global_admin */}
           {me.role === "global_admin" && (
             <select
               value={form.empresa}
               onChange={(e) => setForm({ ...form, empresa: e.target.value })}
               className="p-2 border rounded"
             >
-              <option value="">Sin empresa</option>
+              <option value="">Selecciona empresa</option>
               {empresas.map((e) => (
                 <option key={e._id} value={e._id}>
                   {e.nombre}
@@ -116,17 +110,26 @@ export default function UserFormModal({ user = {}, onClose, onSaved }) {
               ))}
             </select>
           )}
+
           <select
             value={form.role}
             onChange={(e) => setForm({ ...form, role: e.target.value })}
             className="p-2 border rounded"
           >
             <option value="trabajador">Trabajador</option>
-            <option value="admin">Admin</option>
+            <option value="admin">Admin empresa</option>
             {me.role === "global_admin" && (
               <option value="global_admin">Global Admin</option>
             )}
           </select>
+
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) =>
+              setForm({ ...form, imagenPerfil: e.target.files[0] })
+            }
+          />
 
           <div className="flex gap-2 mt-2">
             <button
@@ -137,8 +140,8 @@ export default function UserFormModal({ user = {}, onClose, onSaved }) {
             </button>
             <button
               type="button"
-              onClick={onClose}
               className="flex-1 bg-gray-300 p-2 rounded"
+              onClick={onClose}
             >
               Cancelar
             </button>

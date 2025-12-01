@@ -149,7 +149,17 @@ export default function FichajesSection() {
                   </td>
                   <td className="p-3">{f.userId?.email}</td>
                   <td className="p-3">{new Date(f.fecha).toLocaleString()}</td>
-                  <td className="p-3">{f.tipo}</td>
+                  <td
+                    className={`p-3 font-semibold ${
+                      f.tipo === "entrada"
+                        ? "text-green-600"
+                        : f.tipo === "salida"
+                        ? "text-red-600"
+                        : "text-yellow-600"
+                    }`}
+                  >
+                    {f.tipo}
+                  </td>
                 </tr>
               ))}
             </tbody>
