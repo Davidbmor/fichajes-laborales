@@ -3,6 +3,10 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { getEmpresas, createUser, updateUser } from "../api/api";
 
+const validarEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const validarNombre = (nombre) => /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s\-']+$/.test(nombre);
+const validarPassword = (pwd) => pwd.length >= 6;
+
 export default function UserFormModal({ user = {}, onClose, onSaved, empresaId = null }) {
   const { token, user: me } = useAuth();
   const isEdit = !!user._id;
@@ -60,6 +64,28 @@ export default function UserFormModal({ user = {}, onClose, onSaved, empresaId =
     e.preventDefault();
     setErrorMessage("");
 
+    // Validaciones cliente
+    if (!validarNombre(form.nombre.trim())) {
+      setErrorMessage("Nombre inválido: solo letras, espacios, guiones y apóstrofes");
+      return;
+    }
+    if (!validarNombre(form.apellidos.trim())) {
+      setErrorMessage("Apellidos inválidos: solo letras, espacios, guiones y apóstrofes");
+      return;
+    }
+    if (!validarEmail(form.email.trim())) {
+      setErrorMessage("Email inválido: debe contener @ y tener terminacion .ejemplo");
+      return;
+    }
+    if (!isEdit && !validarPassword(form.password)) {
+      setErrorMessage("La contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+    if (isEdit && form.password && !validarPassword(form.password)) {
+      setErrorMessage("La contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+
     const fd = new FormData();
     Object.entries(form).forEach(([key, val]) =>
       key === "imagenPerfil"
@@ -103,7 +129,7 @@ export default function UserFormModal({ user = {}, onClose, onSaved, empresaId =
           <input
             value={form.nombre}
             onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-            placeholder="Nombre"
+            placeholder="Nombre (solo letras, espacios, guiones)"
             required
             className="p-2 border rounded"
           />
@@ -111,7 +137,7 @@ export default function UserFormModal({ user = {}, onClose, onSaved, empresaId =
           <input
             value={form.apellidos}
             onChange={(e) => setForm({ ...form, apellidos: e.target.value })}
-            placeholder="Apellidos"
+            placeholder="Apellidos (solo letras, espacios, guiones)"
             required
             className="p-2 border rounded"
           />
@@ -119,21 +145,19 @@ export default function UserFormModal({ user = {}, onClose, onSaved, empresaId =
           <input
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
-            placeholder="Email"
+            placeholder="Email (ej: usuario@ejemplo.com)"
             required
             className="p-2 border rounded"
           />
 
-          {!isEdit && (
-            <input
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              type="password"
-              placeholder="Contraseña"
-              required
-              className="p-2 border rounded"
-            />
-          )}
+          <input
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            type="password"
+            placeholder={isEdit ? "Contraseña (dejar vacío para no cambiar)" : "Contraseña"}
+            required={!isEdit}
+            className="p-2 border rounded"
+          />
 
           {/* Empresa SOLO visible para global_admin SI NO ES global_admin el que se crea */}
           {me.role === "global_admin" && form.role !== "global_admin" && (

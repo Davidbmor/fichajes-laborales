@@ -3,6 +3,9 @@ import bcrypt from "bcryptjs";
 import fs from "fs/promises";
 import path from "path";
 
+const validarEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const validarNombre = (nombre) => /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s\-']+$/.test(nombre);
+
 export const obtenerUsuarios = async (req, res) => {
   try {
     let filtro = {};
@@ -26,6 +29,24 @@ export const obtenerUsuarios = async (req, res) => {
 export const crearUsuario = async (req, res) => {
   try {
     const { nombre, apellidos, email, password, role, empresa } = req.body;
+
+    // Validar campos requeridos y formato
+    if (!nombre || !apellidos || !email || !password) {
+      return res.status(400).json({ message: "Campos requeridos: nombre, apellidos, email, contraseña" });
+    }
+
+    if (!validarNombre(nombre.trim())) {
+      return res.status(400).json({ message: "Nombre inválido: solo letras, espacios, guiones y apóstrofes" });
+    }
+    if (!validarNombre(apellidos.trim())) {
+      return res.status(400).json({ message: "Apellidos inválidos: solo letras, espacios, guiones y apóstrofes" });
+    }
+    if (!validarEmail(email.trim())) {
+      return res.status(400).json({ message: "Email inválido: debe tener formato usuario@dominio.com" });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ message: "Contraseña debe tener al menos 6 caracteres" });
+    }
 
     let empresaAsignada = empresa || null;
     
@@ -90,6 +111,17 @@ export const crearUsuario = async (req, res) => {
 export const actualizarUsuario = async (req, res) => {
   try {
     const updates = { ...req.body };
+
+    // Validar nombre y apellidos si vienen en la solicitud
+    if (updates.nombre && !validarNombre(updates.nombre.trim())) {
+      return res.status(400).json({ message: "Nombre inválido: solo letras, espacios, guiones y apóstrofes" });
+    }
+    if (updates.apellidos && !validarNombre(updates.apellidos.trim())) {
+      return res.status(400).json({ message: "Apellidos inválidos: solo letras, espacios, guiones y apóstrofes" });
+    }
+    if (updates.email && !validarEmail(updates.email.trim())) {
+      return res.status(400).json({ message: "Email inválido: debe tener formato usuario@dominio.com" });
+    }
 
     console.log("actualizarUsuario - Content-Type:", req.headers["content-type"]);
     console.log("actualizarUsuario - req.file:", req.file);

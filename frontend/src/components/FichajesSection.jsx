@@ -16,6 +16,8 @@ export default function FichajesSection() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [loading, setLoading] = useState(false);
+  const [paginaActual, setPaginaActual] = useState(1);
+  const itemsPorPagina = 30;
 
   useEffect(() => {
     const cargarMeta = async () => {
@@ -64,6 +66,7 @@ export default function FichajesSection() {
   const cargarFichajes = async () => {
     try {
       setLoading(true);
+      setPaginaActual(1); // resetear paginación al cargar nuevos datos
       const query = construirQuery();
       const data = await getFichajes(token, query);
       setFichajes(data);
@@ -152,6 +155,32 @@ export default function FichajesSection() {
   };
 
   const agrupado = agruparFichajes();
+
+  // Paginación
+  const totalPaginas = Math.ceil(agrupado.length / itemsPorPagina);
+  const inicio = (paginaActual - 1) * itemsPorPagina;
+  const fin = inicio + itemsPorPagina;
+  const agrupadoPaginado = agrupado.slice(inicio, fin);
+
+  const generarNumeroPaginas = () => {
+    const nums = [];
+    const rango = 5; // mostrar ±5 páginas alrededor de la actual
+
+    let start = Math.max(1, paginaActual - rango);
+    let end = Math.min(totalPaginas, paginaActual + rango);
+
+    // ajustar si estamos cerca de los extremos
+    if (paginaActual <= rango) {
+      end = Math.min(totalPaginas, 2 * rango + 1);
+    } else if (paginaActual > totalPaginas - rango) {
+      start = Math.max(1, totalPaginas - 2 * rango);
+    }
+
+    for (let i = start; i <= end; i++) {
+      nums.push(i);
+    }
+    return nums;
+  };
 
   return (
     <div className="w-full p-6 bg-white shadow-md rounded-xl">
@@ -265,17 +294,57 @@ export default function FichajesSection() {
         ) : agrupado.length === 0 ? (
           <p>No hay fichajes</p>
         ) : (
-          <table className="w-full border-collapse border border-gray-300">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="p-3 border border-gray-300 text-left">Perfil</th>
-                <th className="p-3 border border-gray-300 text-left">Nombre</th>
-                <th className="p-3 border border-gray-300 text-left">Fecha</th>
-                <th className="p-3 border border-gray-300 text-left">Fichajes del día</th>
-              </tr>
-            </thead>
-            <tbody>
-              {agrupado.map((item, idx) => (
+          <>
+            {/* Paginación arriba */}
+            <div className="flex justify-center items-center gap-2 mb-4 flex-wrap">
+              <button
+                onClick={() => setPaginaActual(Math.max(1, paginaActual - 1))}
+                disabled={paginaActual === 1}
+                className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+              >
+                &lt;
+              </button>
+
+              {generarNumeroPaginas().map((num) => (
+                <button
+                  key={num}
+                  onClick={() => setPaginaActual(num)}
+                  className={`px-2 py-1 border rounded ${
+                    paginaActual === num
+                      ? "bg-indigo-600 text-white"
+                      : "hover:bg-gray-100"
+                  }`}
+                >
+                  {num}
+                </button>
+              ))}
+
+              <span className="text-sm text-gray-600">-</span>
+
+              <button
+                onClick={() => setPaginaActual(Math.min(totalPaginas, paginaActual + 1))}
+                disabled={paginaActual === totalPaginas}
+                className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+              >
+                &gt;
+              </button>
+
+              <span className="text-sm text-gray-600 ml-2">
+                {totalPaginas > 0 ? `${agrupadoPaginado.length}/${agrupado.length}` : "0/0"}
+              </span>
+            </div>
+
+            <table className="w-full border-collapse border border-gray-300">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="p-3 border border-gray-300 text-left">Perfil</th>
+                  <th className="p-3 border border-gray-300 text-left">Nombre</th>
+                  <th className="p-3 border border-gray-300 text-left">Fecha</th>
+                  <th className="p-3 border border-gray-300 text-left">Fichajes del día</th>
+                </tr>
+              </thead>
+              <tbody>
+                {agrupadoPaginado.map((item, idx) => (
                 <tr key={idx} className="border-b hover:bg-gray-50">
                   {/* Imagen de perfil (de la base de datos o placeholder) */}
                   <td className="p-3 border border-gray-300">
@@ -362,8 +431,44 @@ export default function FichajesSection() {
                   </td>
                 </tr>
               ))}
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+
+            {/* Paginación abajo */}
+            <div className="flex justify-center items-center gap-2 mt-4 flex-wrap">
+              <button
+                onClick={() => setPaginaActual(Math.max(1, paginaActual - 1))}
+                disabled={paginaActual === 1}
+                className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+              >
+                &lt;
+              </button>
+
+              {generarNumeroPaginas().map((num) => (
+                <button
+                  key={num}
+                  onClick={() => setPaginaActual(num)}
+                  className={`px-2 py-1 border rounded ${
+                    paginaActual === num
+                      ? "bg-indigo-600 text-white"
+                      : "hover:bg-gray-100"
+                  }`}
+                >
+                  {num}
+                </button>
+              ))}
+
+              <span className="text-sm text-gray-600">-</span>
+
+              <button
+                onClick={() => setPaginaActual(Math.min(totalPaginas, paginaActual + 1))}
+                disabled={paginaActual === totalPaginas}
+                className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+              >
+                &gt;
+              </button>
+            </div>
+          </>
         )}
       </div>
     </div>
