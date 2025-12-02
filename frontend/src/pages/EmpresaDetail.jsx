@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { getEmpresas, getUsers, deleteUser } from "../api/api";
+import { getEmpresas, getUsers, deleteUser, BACKEND_URL } from "../api/api";
 import UserFormModal from "../components/UserFormModal";
 import FichajesSection from "../components/FichajesSection";
 import { useParams, useNavigate } from "react-router-dom";
@@ -145,7 +145,7 @@ export default function EmpresaDetail() {
                   <img
                     src={
                       u.imagenPerfil
-                        ? `http://localhost:4000${u.imagenPerfil}`
+                        ? `${BACKEND_URL}${u.imagenPerfil}`
                         : `https://ui-avatars.com/api/?name=${encodeURIComponent(
                             u.nombre + " " + u.apellidos
                           )}&background=ddd&color=333&size=128`

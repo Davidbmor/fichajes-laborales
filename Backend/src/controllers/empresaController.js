@@ -7,7 +7,19 @@ export const crearEmpresa = async (req, res) => {
   try {
     const imagenUrl = req.file ? `/uploads/companies/${req.file.filename}` : null;
 
-    const { nombre } = req.body;
+    let { nombre } = req.body;
+    if (!nombre || typeof nombre !== 'string') return res.status(400).json({ message: 'Nombre inválido' });
+
+    nombre = nombre.trim();
+    if (nombre.length === 0) return res.status(400).json({ message: 'Nombre inválido' });
+
+    // escape regex metacharacters to avoid injection when building regex
+    const escapeForRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const nombreEsc = escapeForRegex(nombre);
+
+    // comprobar duplicados por nombre (case-insensitive, trimmed)
+    const existe = await Empresa.findOne({ nombre: { $regex: `^${nombreEsc}$`, $options: 'i' } });
+    if (existe) return res.status(400).json({ message: 'Empresa ya existe' });
 
     const empresa = await Empresa.create({
       nombre,
@@ -36,6 +48,23 @@ export const actualizarEmpresa = async (req, res) => {
 
     if (req.file) {
       updates.imagenUrl = `/uploads/companies/${req.file.filename}`;
+    }
+
+    if (updates.nombre && typeof updates.nombre === 'string') {
+      const nuevoNombre = updates.nombre.trim();
+      if (nuevoNombre.length === 0) return res.status(400).json({ message: 'Nombre inválido' });
+
+      const escapeForRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const nombreEsc = escapeForRegex(nuevoNombre);
+
+      // comprobar duplicados por nombre (case-insensitive), excluyendo la propia empresa
+      const existe = await Empresa.findOne({
+        _id: { $ne: req.params.id },
+        nombre: { $regex: `^${nombreEsc}$`, $options: 'i' }
+      });
+      if (existe) return res.status(400).json({ message: 'Otra empresa con ese nombre ya existe' });
+
+      updates.nombre = nuevoNombre;
     }
 
     const empresa = await Empresa.findByIdAndUpdate(req.params.id, updates, { new: true });

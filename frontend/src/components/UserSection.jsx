@@ -1,8 +1,7 @@
 import React, { useEffect, useState, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import UserFormModal from "./UserFormModal";
-import { getUsers } from "../api/api";
-import { deleteUser } from "../api/api";
+import { getUsers, deleteUser, BACKEND_URL } from "../api/api";
 
 export default function UsersSection() {
   const { token } = useContext(AuthContext);
@@ -66,14 +65,14 @@ export default function UsersSection() {
         )}
       </div>
 
-      {/* CARDS: usar mismo grid que EmpresaDetail */}
+      {/* CARDS*/}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {usuariosFiltrados.map((u) => (
           <div key={u._id} className="bg-white p-4 rounded shadow flex items-center gap-4">
             <img
               src={
                 u.imagenPerfil
-                  ? `http://localhost:4000${u.imagenPerfil}`
+                  ? `${BACKEND_URL}${u.imagenPerfil}`
                   : `https://ui-avatars.com/api/?name=${encodeURIComponent(u.nombre + " " + u.apellidos)}&background=ddd&color=333&size=128`
               }
               alt={u.nombre}

@@ -1,7 +1,7 @@
 // frontend/src/components/FichajesSection.jsx
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
-import { getFichajes, getUsers, getEmpresas } from "../api/api";
+import { getFichajes, getUsers, getEmpresas, BACKEND_URL } from "../api/api";
 import * as XLSX from "xlsx";
 
 export default function FichajesSection() {
@@ -9,10 +9,10 @@ export default function FichajesSection() {
   const [fichajes, setFichajes] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [empresas, setEmpresas] = useState([]);
-  const [fecha, setFecha] = useState(() => new Date().toISOString().split("T")[0]); // hoy por defecto
-  const [tipoFiltro, setTipoFiltro] = useState("dia"); // 'dia'|'mes'|'año'|'rango'
-  const [usuarioFiltro, setUsuarioFiltro] = useState([]); // array ids
-  const [empresaFiltro, setEmpresaFiltro] = useState(user?.role === "admin" ? (user.empresa?._id || user.empresa) : ""); // group filter
+  const [fecha, setFecha] = useState(() => new Date().toISOString().split("T")[0]);
+  const [tipoFiltro, setTipoFiltro] = useState("dia");
+  const [usuarioFiltro, setUsuarioFiltro] = useState([]);
+  const [empresaFiltro, setEmpresaFiltro] = useState(user?.role === "admin" ? (user.empresa?._id || user.empresa) : "");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [loading, setLoading] = useState(false);
@@ -37,7 +37,6 @@ export default function FichajesSection() {
   const construirQuery = () => {
     const params = new URLSearchParams();
 
-    // fechas
     if (tipoFiltro === "rango") {
       if (fromDate) params.append("from", fromDate);
       if (toDate) params.append("to", toDate);
@@ -48,12 +47,10 @@ export default function FichajesSection() {
       if (tipoFiltro === "dia") params.append("dia", d.getDate());
     }
 
-    // empresa (grupo) tiene prioridad sobre usuario list si se desea
     if (empresaFiltro) {
       params.append("empresa", empresaFiltro);
     }
 
-    // usuarios: si hay selección de usuarios -> csv, si no -> enviar 'all' para que backend aplique rol/empresa
     if (Array.isArray(usuarioFiltro) && usuarioFiltro.length > 0) {
       params.append("usuarios", usuarioFiltro.join(","));
     } else {
@@ -77,34 +74,95 @@ export default function FichajesSection() {
     }
   };
 
-  // cargar por defecto al montar (día actual) y cuando cambian filtros importantes
   useEffect(() => {
     cargarFichajes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tipoFiltro, fecha, fromDate, toDate, usuarioFiltro, empresaFiltro]);
 
+  // Agrupar fichajes por usuario y día, acumulando todos los tipos (entrada, salida, ausencia, etc)
+  const agruparFichajes = () => {
+    const agrupado = {};
+
+    fichajes.forEach((f) => {
+      const userId = f.userId?._id;
+      const dateKey = new Date(f.fecha).toLocaleDateString("es-ES");
+      const key = `${userId}-${dateKey}`;
+
+      if (!agrupado[key]) {
+        agrupado[key] = {
+          userId: f.userId,
+          fecha: f.fecha,
+          registros: [], // array de todos los fichajes del día
+        };
+      }
+
+      agrupado[key].registros.push(f);
+    });
+
+    // ordenar registros dentro de cada día por hora y luego ordenar por fecha descendente
+    Object.values(agrupado).forEach((item) => {
+      item.registros.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+    });
+
+    return Object.values(agrupado).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+  };
+
+  const getIconoYColor = (tipo) => {
+    switch (tipo) {
+      case "entrada":
+        return { icono: "✓", color: "bg-green-100 text-green-700", label: "Entrada" };
+      case "salida":
+        return { icono: "✗", color: "bg-red-100 text-red-700", label: "Salida" };
+      case "ausencia":
+        return { icono: "—", color: "bg-gray-100 text-gray-700", label: "Ausencia" };
+      default:
+        return { icono: "?", color: "bg-yellow-100 text-yellow-700", label: tipo };
+    }
+  };
+
   const exportarExcel = () => {
     if (fichajes.length === 0) return alert("No hay datos para exportar.");
-    const worksheet = XLSX.utils.json_to_sheet(
-      fichajes.map((f) => ({
-        Nombre: `${f.userId?.nombre || ""} ${f.userId?.apellidos || ""}`.trim() || "Desconocido",
-        Email: f.userId?.email || "—",
-        Fecha: new Date(f.fecha).toLocaleString(),
-        Tipo: f.tipo,
-        Empresa: f.userId?.empresa ? f.userId.empresa : "",
-      }))
-    );
+
+    const agrupado = agruparFichajes();
+    const filas = [];
+
+    agrupado.forEach((item) => {
+      const nombreCompleto = `${item.userId?.nombre || ""} ${item.userId?.apellidos || ""}`.trim() || "Desconocido";
+      const email = item.userId?.email || "—";
+      const fecha = new Date(item.fecha).toLocaleDateString("es-ES");
+
+      item.registros.forEach((reg, idx) => {
+        filas.push({
+          Nombre: idx === 0 ? nombreCompleto : "",
+          Email: idx === 0 ? email : "",
+          Fecha: idx === 0 ? fecha : "",
+          Tipo: reg.tipo,
+          Hora: new Date(reg.fecha).toLocaleTimeString("es-ES", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        });
+      });
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(filas);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Fichajes");
     XLSX.writeFile(workbook, `fichajes_${tipoFiltro}_${fecha || fromDate || "todos"}.xlsx`);
   };
+
+  const agrupado = agruparFichajes();
 
   return (
     <div className="w-full p-6 bg-white shadow-md rounded-xl">
       <h2 className="text-xl font-bold mb-4">Fichajes</h2>
 
       <div className="flex flex-wrap gap-4 mb-4">
-        <select value={tipoFiltro} onChange={(e) => setTipoFiltro(e.target.value)} className="border p-2 rounded">
+        <select
+          value={tipoFiltro}
+          onChange={(e) => setTipoFiltro(e.target.value)}
+          className="border p-2 rounded"
+        >
           <option value="dia">Por día</option>
           <option value="mes">Por mes</option>
           <option value="año">Por año</option>
@@ -112,45 +170,72 @@ export default function FichajesSection() {
         </select>
 
         {tipoFiltro !== "rango" && (
-          <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className="border p-2 rounded" />
+          <input
+            type="date"
+            value={fecha}
+            onChange={(e) => setFecha(e.target.value)}
+            className="border p-2 rounded"
+          />
         )}
 
         {tipoFiltro === "rango" && (
           <>
-            <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="border p-2 rounded" />
-            <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="border p-2 rounded" />
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="border p-2 rounded"
+            />
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              className="border p-2 rounded"
+            />
           </>
         )}
 
-        {/* Grupo / Empresa (solo global_admin puede elegir; admin empresa ve su empresa fijada) */}
-        <select
-          value={empresaFiltro || ""}
-          onChange={(e) => setEmpresaFiltro(e.target.value)}
-          className="border p-2 rounded"
-          disabled={user?.role === "admin"}
-        >
-          <option value="">Todos los grupos</option>
-          {empresas.map((c) => (
-            <option key={c._id} value={c._id}>
-              {c.nombre}
-            </option>
-          ))}
-        </select>
+        {/* Grupo / Empresa (solo visible para global_admin) */}
+        {user?.role === "global_admin" && (
+          <select
+            value={empresaFiltro || ""}
+            onChange={(e) => setEmpresaFiltro(e.target.value)}
+            className="border p-2 rounded"
+          >
+            <option value="">Todos los grupos</option>
+            {empresas.map((c) => (
+              <option key={c._id} value={c._id}>
+                {c.nombre}
+              </option>
+            ))}
+          </select>
+        )}
 
         {/* multi-select usuarios */}
         <select
           multiple
           value={usuarioFiltro}
-          onChange={(e) => setUsuarioFiltro(Array.from(e.target.selectedOptions).map((o) => o.value))}
+          onChange={(e) =>
+            setUsuarioFiltro(
+              Array.from(e.target.selectedOptions).map((o) => o.value)
+            )
+          }
           className="border p-2 rounded max-h-48 overflow-auto"
         >
-          {/* Mostrar opción para "Todos" */}
           <option value="">Todos los trabajadores</option>
           {usuarios
             .filter((u) => {
-              // si hay empresaFiltro, mostrar solo usuarios de esa empresa en la lista
-              if (empresaFiltro) return u.empresa && (u.empresa._id || u.empresa) === empresaFiltro;
-              if (user?.role === "admin") return u.empresa && (u.empresa._id || u.empresa) === (user.empresa?._id || user.empresa);
+              // normalizar empresaId
+              const userEmpresaId = u.empresa ? (typeof u.empresa === "object" ? String(u.empresa._id) : String(u.empresa)) : null;
+              
+              if (empresaFiltro)
+                return userEmpresaId === String(empresaFiltro);
+              
+              if (user?.role === "admin") {
+                const adminEmpresaId = user.empresa ? (typeof user.empresa === "object" ? String(user.empresa._id) : String(user.empresa)) : null;
+                return userEmpresaId === adminEmpresaId;
+              }
+              
               return true;
             })
             .map((u) => (
@@ -160,33 +245,120 @@ export default function FichajesSection() {
             ))}
         </select>
 
-        <button onClick={cargarFichajes} className="bg-indigo-600 text-white px-4 py-2 rounded">Buscar</button>
-        <button onClick={exportarExcel} className="bg-green-600 text-white px-4 py-2 rounded">📤 Exportar Excel</button>
+        <button
+          onClick={cargarFichajes}
+          className="bg-indigo-600 text-white px-4 py-2 rounded"
+        >
+          Buscar
+        </button>
+        <button
+          onClick={exportarExcel}
+          className="bg-green-600 text-white px-4 py-2 rounded"
+        >
+          📤 Exportar Excel
+        </button>
       </div>
 
       <div className="overflow-x-auto">
         {loading ? (
           <p>Cargando...</p>
-        ) : fichajes.length === 0 ? (
+        ) : agrupado.length === 0 ? (
           <p>No hay fichajes</p>
         ) : (
-          <table className="w-full">
+          <table className="w-full border-collapse border border-gray-300">
             <thead className="bg-gray-100">
               <tr>
-                <th className="p-3">Nombre</th>
-                <th className="p-3">Email</th>
-                <th className="p-3">Fecha</th>
-                <th className="p-3">Tipo</th>
+                <th className="p-3 border border-gray-300 text-left">Perfil</th>
+                <th className="p-3 border border-gray-300 text-left">Nombre</th>
+                <th className="p-3 border border-gray-300 text-left">Fecha</th>
+                <th className="p-3 border border-gray-300 text-left">Fichajes del día</th>
               </tr>
             </thead>
             <tbody>
-              {fichajes.map((f) => (
-                <tr key={f._id} className="border-b">
-                  <td className="p-3">{f.userId ? `${f.userId.nombre} ${f.userId.apellidos}` : "Desconocido"}</td>
-                  <td className="p-3">{f.userId?.email}</td>
-                  <td className="p-3">{new Date(f.fecha).toLocaleString()}</td>
-                  <td className={`p-3 font-semibold ${f.tipo === "entrada" ? "text-green-600" : f.tipo === "salida" ? "text-red-600" : "text-yellow-600"}`}>
-                    {f.tipo}
+              {agrupado.map((item, idx) => (
+                <tr key={idx} className="border-b hover:bg-gray-50">
+                  {/* Imagen de perfil (de la base de datos o placeholder) */}
+                  <td className="p-3 border border-gray-300">
+                    {(() => {
+                      const nombreCompleto = `${item.userId?.nombre || ""} ${item.userId?.apellidos || ""}`.trim();
+
+                      // item.userId puede ser objeto (populado) o solo id (string)
+                      let usuarioDatos = null;
+                      if (item.userId && typeof item.userId === "object") {
+                        usuarioDatos = item.userId;
+                      } else if (item.userId) {
+                        // buscar en la lista de usuarios cargada por el componente
+                        usuarioDatos = usuarios.find((u) => String(u._id) === String(item.userId)) || null;
+                      }
+
+                      const imagenPerfil = usuarioDatos?.imagenPerfil;
+
+                      // determinar URL final: si es absolute (http/https) usarla tal cual, si es relativa (empieza por /) prefijar BACKEND_URL
+                      let urlImg = `https://ui-avatars.com/api/?name=${encodeURIComponent(nombreCompleto || "-")}&background=ddd&color=333&size=64`;
+                      if (imagenPerfil && typeof imagenPerfil === "string" && imagenPerfil.trim() !== "") {
+                        if (/^https?:\/\//i.test(imagenPerfil)) {
+                          urlImg = imagenPerfil;
+                        } else {
+                          // ruta relativa en servidor
+                          urlImg = `${BACKEND_URL}${imagenPerfil}`;
+                        }
+                      }
+
+                      // console.debug para inspección rápida (puedes quitarlo después)
+                      console.debug("Fichajes - img", { nombreCompleto, imagenPerfil, urlImg });
+
+                      return (
+                        <img
+                          src={urlImg}
+                          alt={nombreCompleto}
+                          className="w-12 h-12 rounded-full object-cover"
+                          onError={(e) => {
+                            e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(nombreCompleto || "-")}&background=ddd&color=333&size=64`;
+                          }}
+                        />
+                      );
+                    })()}
+                  </td>
+
+                  {/* Nombre y apellidos */}
+                  <td className="p-3 border border-gray-300">
+                    <div className="font-semibold">
+                      {item.userId
+                        ? `${item.userId.nombre} ${item.userId.apellidos}`
+                        : "Desconocido"}
+                    </div>
+                    <div className="text-sm text-gray-600">{item.userId?.email}</div>
+                  </td>
+
+                  {/* Fecha */}
+                  <td className="p-3 border border-gray-300">
+                    {new Date(item.fecha).toLocaleDateString("es-ES")}
+                  </td>
+
+                  {/* Todos los fichajes del día */}
+                  <td className="p-3 border border-gray-300">
+                    <div className="flex flex-wrap gap-2">
+                      {item.registros.map((reg, regIdx) => {
+                        const { icono, color, label } = getIconoYColor(reg.tipo);
+                        const hora = new Date(reg.fecha).toLocaleTimeString(
+                          "es-ES",
+                          {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          }
+                        );
+                        return (
+                          <div
+                            key={regIdx}
+                            className={`${color} px-3 py-1 rounded text-sm font-semibold flex items-center gap-1`}
+                          >
+                            <span>{icono}</span>
+                            <span>{label}</span>
+                            <span className="text-gray-700 ml-1">{hora}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </td>
                 </tr>
               ))}

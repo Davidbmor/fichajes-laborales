@@ -78,7 +78,7 @@ export const obtenerFichajesFiltrados = async (req, res) => {
     }
 
     // Ejecutar consulta con populate
-    const fichajes = await Fichaje.find(filtro).populate("userId", "nombre apellidos email empresa").sort({ fecha: 1 });
+    const fichajes = await Fichaje.find(filtro).populate("userId", "nombre apellidos email empresa imagenPerfil").sort({ fecha: 1 });
 
     res.json(fichajes);
   } catch (error) {

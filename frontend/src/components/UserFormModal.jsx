@@ -8,6 +8,7 @@ export default function UserFormModal({ user = {}, onClose, onSaved, empresaId =
   const isEdit = !!user._id;
 
   const [empresas, setEmpresas] = useState([]);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const [form, setForm] = useState({
     nombre: user.nombre || "",
@@ -57,6 +58,7 @@ export default function UserFormModal({ user = {}, onClose, onSaved, empresaId =
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMessage("");
 
     const fd = new FormData();
     Object.entries(form).forEach(([key, val]) =>
@@ -73,14 +75,20 @@ export default function UserFormModal({ user = {}, onClose, onSaved, empresaId =
     // Si estamos en vista de empresa y hay empresaId, forzarlo
     if (empresaId) fd.set("empresa", empresaId);
 
-    if (isEdit) {
-      await updateUser(token, user._id, fd);
-    } else {
-      await createUser(token, fd);
-    }
+    try {
+      if (isEdit) {
+        await updateUser(token, user._id, fd);
+      } else {
+        await createUser(token, fd);
+      }
 
-    onSaved && onSaved();
-    onClose();
+      onSaved && onSaved();
+      onClose();
+    } catch (err) {
+      console.error(err);
+      const msg = err.response?.data?.message || err.message || "Error creando/actualizando usuario";
+      setErrorMessage(msg);
+    }
   };
 
   return (
@@ -91,6 +99,7 @@ export default function UserFormModal({ user = {}, onClose, onSaved, empresaId =
         </h3>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+          {errorMessage && <div className="text-red-600 mb-2">{errorMessage}</div>}
           <input
             value={form.nombre}
             onChange={(e) => setForm({ ...form, nombre: e.target.value })}

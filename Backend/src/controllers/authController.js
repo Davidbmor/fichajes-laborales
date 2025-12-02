@@ -50,12 +50,7 @@ export const login = async (req, res) => {
     const userSafe = await User.findById(user._id).select("-password").populate("empresa", "nombre imagenUrl");
 
     res.json({
-      user: {
-        _id: user._id,
-        nombre: user.nombre,
-        email: user.email,
-        role: user.role,
-      },
+      user: userSafe,
       token: generarToken(user._id),
     });
   } catch (err) {

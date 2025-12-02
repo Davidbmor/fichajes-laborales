@@ -1,3 +1,4 @@
+// ...existing code...
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
@@ -7,124 +8,123 @@ import Empresa from "./src/models/Empresa.js";
 
 dotenv.config();
 
-// Conexión DB
-const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/fichajes";
-mongoose
-  .connect(MONGO_URI)
-  .then(() => console.log("✅ MongoDB conectado"))
-  .catch((err) => console.error("❌ Error conectando MongoDB:", err));
+const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/fichaje_laboral";
 
-const NUM_TRABAJADORES = 6; // Totales (se repartirán entre empresas)
+async function connect() {
+  await mongoose.connect(MONGO_URI);
+  console.log("✅ MongoDB conectado");
+}
+
+const NUM_TRABAJADORES_POR_EMPRESA = 15;
 const MESES_ATRAS = 3;
+
+const empresasData = [
+  { nombre: "AlphaCorp", imagenUrl: "https://picsum.photos/200/200?random=11" },
+  { nombre: "BetaLogistics", imagenUrl: "https://picsum.photos/200/200?random=12" },
+  { nombre: "GammaTech", imagenUrl: "https://picsum.photos/200/200?random=13" },
+];
 
 const seed = async () => {
   try {
-    console.log("🧹 Limpiando base de datos...");
-    await User.deleteMany();
-    await Empresa.deleteMany();
-    await Fichaje.deleteMany();
+    await connect();
 
+    console.log("🧹 Limpiando colecciones...");
+    await Promise.all([User.deleteMany(), Empresa.deleteMany(), Fichaje.deleteMany()]);
     console.log("✅ Colecciones limpiadas");
 
-    // ✅ 1️⃣ Crear Empresas
-    const empresa1 = await Empresa.create({
-      nombre: "TechNova",
-      imagenUrl: "https://picsum.photos/200/200?random=1",
-    });
+    // crear empresas
+    const empresas = [];
+    for (const e of empresasData) {
+      const created = await Empresa.create(e);
+      empresas.push(created);
+    }
+    console.log(`🏢 ${empresas.length} empresas creadas`);
 
-    const empresa2 = await Empresa.create({
-      nombre: "LogistiPro",
-      imagenUrl: "https://picsum.photos/200/200?random=2",
-    });
-
-    console.log("🏢 Empresas creadas:", empresa1.nombre, empresa2.nombre);
-
-    // ✅ 2️⃣ Crear Admin Global
     const hashedPassword = await bcrypt.hash("123456", 10);
 
-    const adminGlobal = await User.create({
-      nombre: "Juan",
-      apellidos: "SuperAdmin",
-      email: "admin@global.com",
+    // crear admin global
+    const globalAdmin = await User.create({
+      nombre: "Global",
+      apellidos: "Admin",
+      email: "global@admin.com",
       password: hashedPassword,
       role: "global_admin",
-      imagenUrl: "https://picsum.photos/200/200?random=3",
+      imagenPerfil: "https://picsum.photos/200/200?random=20",
       empresa: null,
     });
+    console.log("🌍 Admin global creado:", globalAdmin.email);
 
-    console.log("🌍 Admin Global creado:", adminGlobal.email);
+    // crear admins y trabajadores por empresa
+    const trabajadoresAll = [];
+    for (let i = 0; i < empresas.length; i++) {
+      const emp = empresas[i];
 
-    // ✅ 3️⃣ Crear Admins de Empresa
-    const adminEmpresa1 = await User.create({
-      nombre: "Laura",
-      apellidos: "Tech",
-      email: "admin1@empresa.com",
-      password: hashedPassword,
-      role: "admin",
-      empresa: empresa1._id,
-      imagenUrl: "https://picsum.photos/200/200?random=4",
-    });
-
-    const adminEmpresa2 = await User.create({
-      nombre: "Pedro",
-      apellidos: "Logistic",
-      email: "admin2@empresa.com",
-      password: hashedPassword,
-      role: "admin",
-      empresa: empresa2._id,
-      imagenUrl: "https://picsum.photos/200/200?random=5",
-    });
-
-    console.log("👨‍💼 Admins empresa creados");
-
-    // ✅ 4️⃣ Crear trabajadores
-    const trabajadores = [];
-
-    for (let i = 1; i <= NUM_TRABAJADORES; i++) {
-      const empresaAsignada = i % 2 === 0 ? empresa1 : empresa2;
-
-      const user = await User.create({
-        nombre: `Trabajador${i}`,
-        apellidos: `Apellido${i}`,
-        email: `trabajador${i}@test.com`,
+      // admin de empresa
+      const adminEmpresa = await User.create({
+        nombre: `Admin${i + 1}`,
+        apellidos: emp.nombre,
+        email: `admin${i + 1}@${emp.nombre.toLowerCase()}.com`,
         password: hashedPassword,
-        role: "trabajador",
-        empresa: empresaAsignada._id,
-        imagenUrl: `https://picsum.photos/200/200?random=${10 + i}`,
+        role: "admin",
+        imagenPerfil: `https://picsum.photos/200/200?random=${30 + i}`,
+        empresa: emp._id,
       });
+      console.log(`👨‍💼 Admin creado para ${emp.nombre}: ${adminEmpresa.email}`);
 
-      trabajadores.push(user);
+      // trabajadores
+      for (let t = 1; t <= NUM_TRABAJADORES_POR_EMPRESA; t++) {
+        const idx = i * NUM_TRABAJADORES_POR_EMPRESA + t;
+        const trabajador = await User.create({
+          nombre: `Trabajador${idx}`,
+          apellidos: `Apellido${idx}`,
+          email: `trabajador${idx}@${emp.nombre.toLowerCase()}.com`,
+          password: hashedPassword,
+          role: "trabajador",
+          imagenPerfil: `https://picsum.photos/200/200?random=${100 + idx}`,
+          empresa: emp._id,
+        });
+        trabajadoresAll.push(trabajador);
+      }
+      console.log(`👷 ${NUM_TRABAJADORES_POR_EMPRESA} trabajadores creados para ${emp.nombre}`);
     }
 
-    console.log(`👷‍♂️ ${trabajadores.length} trabajadores creados`);
-
-    // ✅ 5️⃣ Crear fichajes últimos 3 meses
-    console.log("🕒 Generando fichajes...");
-
+    // generar fichajes: para cada trabajador, en los últimos MESES_ATRAS meses, cada día una entrada y una salida
+    console.log("🕒 Generando fichajes (entradas + salidas) para los últimos", MESES_ATRAS, "meses...");
     const today = new Date();
-    for (let m = 0; m < MESES_ATRAS; m++) {
-      const date = new Date(today.getFullYear(), today.getMonth() - m, 1);
-      const lastDay = new Date(
-        date.getFullYear(),
-        date.getMonth() + 1,
-        0
-      ).getDate();
 
-      for (let d = 1; d <= lastDay; d++) {
-        for (const user of trabajadores) {
+    // para evitar demasiadas operaciones await por cada create, acumulamos en array y hacemos insertMany por lotes
+    const batch = [];
+    for (const trabajador of trabajadoresAll) {
+      for (let m = 0; m < MESES_ATRAS; m++) {
+        const date = new Date(today.getFullYear(), today.getMonth() - m, 1);
+        const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+
+        for (let d = 1; d <= lastDay; d++) {
+          // entrada ~ 08:00 +/- minutos aleatorios
           const entrada = new Date(date.getFullYear(), date.getMonth(), d, 8, Math.floor(Math.random() * 40));
+          // salida ~ 17:00 +/- minutos aleatorios
           const salida = new Date(date.getFullYear(), date.getMonth(), d, 17, Math.floor(Math.random() * 40));
 
-          await Fichaje.create({ userId: user._id, tipo: "entrada", fecha: entrada });
-          await Fichaje.create({ userId: user._id, tipo: "salida", fecha: salida });
+          batch.push({ userId: trabajador._id, tipo: "entrada", fecha: entrada });
+          batch.push({ userId: trabajador._id, tipo: "salida", fecha: salida });
+
+          // insertar por lotes cada 2000 fichajes para no saturar memoria
+          if (batch.length >= 2000) {
+            await Fichaje.insertMany(batch);
+            batch.length = 0;
+          }
         }
       }
     }
 
-    console.log("✅ Fichajes creados para los últimos 3 meses");
+    if (batch.length > 0) {
+      await Fichaje.insertMany(batch);
+    }
+
+    console.log("✅ Fichajes generados para trabajadores");
 
     console.log("🎉 Seed completado con éxito");
-    process.exit();
+    process.exit(0);
   } catch (err) {
     console.error("❌ Error en seed:", err);
     process.exit(1);
@@ -132,3 +132,4 @@ const seed = async () => {
 };
 
 seed();
+// ...existing code...

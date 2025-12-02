@@ -5,7 +5,7 @@ import FichajesSection from "../components/FichajesSection";
 
 export default function DashboardAdmin() {
   const { logout, user } = useContext(AuthContext);
-  const [section, setSection] = useState("usuarios"); // default
+  const [section, setSection] = useState("usuarios");
 
   return (
     <div className="flex min-h-screen bg-gray-100">

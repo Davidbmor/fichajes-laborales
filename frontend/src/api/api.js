@@ -1,7 +1,10 @@
 // frontend/src/api/api.js
 import axios from "axios";
 
-const BASE_URL = "http://localhost:4000/api";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
+const BASE_URL = `${BACKEND_URL}/api`;
+
+export { BACKEND_URL };
 
 // ---------------------- AUTENTICACIÓN ----------------------
 export const loginUser = async (email, password) => {

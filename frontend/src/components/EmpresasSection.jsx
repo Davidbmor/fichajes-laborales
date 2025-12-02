@@ -5,6 +5,7 @@ import {
   crearEmpresa,
   actualizarEmpresa,
   eliminarEmpresa,
+  BACKEND_URL,
 } from "../api/api";
 import { useNavigate } from "react-router-dom";
 
@@ -17,6 +18,7 @@ export default function EmpresasSection() {
     nombre: "",
     imagen: null,
   });
+  const [errorMessage, setErrorMessage] = useState("");
   const [modalEliminar, setModalEliminar] = useState(null); // estado para modal de confirmación
 
   useEffect(() => {
@@ -31,19 +33,27 @@ export default function EmpresasSection() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    setErrorMessage("");
+
     const fd = new FormData();
     fd.append("nombre", form.nombre);
     if (form.imagen) fd.append("imagenPerfil", form.imagen);
 
-    if (modoEditar) {
-      await actualizarEmpresa(token, modoEditar, fd);
-    } else {
-      await crearEmpresa(token, fd);
-    }
+    try {
+      if (modoEditar) {
+        await actualizarEmpresa(token, modoEditar, fd);
+      } else {
+        await crearEmpresa(token, fd);
+      }
 
-    setForm({ nombre: "", imagen: null });
-    setModoEditar(null);
-    cargarEmpresas();
+      setForm({ nombre: "", imagen: null });
+      setModoEditar(null);
+      cargarEmpresas();
+    } catch (err) {
+      console.error(err);
+      const msg = err.response?.data?.message || err.message || "Error al crear/actualizar empresa";
+      setErrorMessage(msg);
+    }
   };
 
   const handleEliminar = async (id) => {
@@ -69,6 +79,7 @@ export default function EmpresasSection() {
         onSubmit={handleSubmit}
         className="bg-white p-5 rounded shadow mb-6 flex gap-4 flex-wrap"
       >
+        {errorMessage && <div className="text-red-600 w-full">{errorMessage}</div>}
         <input
           type="text"
           placeholder="Nombre empresa"
@@ -117,7 +128,7 @@ export default function EmpresasSection() {
               <img
                 src={
                   e.imagenUrl
-                    ? `http://localhost:4000${e.imagenUrl}`
+                    ? `${BACKEND_URL}${e.imagenUrl}`
                     : "https://via.placeholder.com/96?text=No+Logo"
                 }
                 alt={e.nombre}

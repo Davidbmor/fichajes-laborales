@@ -1,6 +1,6 @@
 import React, { useContext, useState, useEffect } from "react";
 import { AuthContext } from "../context/AuthContext";
-import { fichar, getFichajes } from "../api/api";
+import { fichar, getFichajes, BACKEND_URL } from "../api/api";
 
 export default function DashboardTrabajador() {
   const { token, user, logout } = useContext(AuthContext);
@@ -98,6 +98,16 @@ export default function DashboardTrabajador() {
         <h2 className="text-2xl font-bold text-center">
           Bienvenido {user?.nombre}
         </h2>
+
+        {user?.empresa?.imagenUrl && (
+          <div className="flex justify-center">
+            <img
+              src={`${BACKEND_URL}${user.empresa.imagenUrl}`}
+              alt={user.empresa.nombre}
+              className="w-32 h-32 object-contain"
+            />
+          </div>
+        )}
 
         <button
           onClick={() => handleFichar("entrada")}
