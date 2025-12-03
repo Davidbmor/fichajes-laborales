@@ -18,14 +18,9 @@ export default function Login() {
 
       login(data.user, data.token);
 
-      // Luego redirigir
-      if (data.user.role === "global_admin") {
-        navigate("/global-admin");
-      } else if (data.user.role === "admin") {
-        navigate("/admin");
-      } else {
-        navigate("/trabajador");
-      }
+      // Navegación será manejada por AppRouter según el rol del usuario
+      // Solo navegar a la raíz, AppRouter redirigirá al lugar correcto
+      navigate("/");
     } catch (err) {
       setMensaje(err.response?.data?.message || "Error al iniciar sesión");
     }

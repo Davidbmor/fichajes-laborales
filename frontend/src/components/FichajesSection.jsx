@@ -1,17 +1,19 @@
 // frontend/src/components/FichajesSection.jsx
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useParams } from "react-router-dom";
 import { getFichajes, getUsers, getEmpresas, BACKEND_URL } from "../api/api";
 import * as XLSX from "xlsx";
 
 export default function FichajesSection() {
   const { token, user } = useAuth();
+  const { userId } = useParams();
   const [fichajes, setFichajes] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [empresas, setEmpresas] = useState([]);
   const [fecha, setFecha] = useState(() => new Date().toISOString().split("T")[0]);
   const [tipoFiltro, setTipoFiltro] = useState("dia");
-  const [usuarioFiltro, setUsuarioFiltro] = useState([]);
+  const [usuarioFiltro, setUsuarioFiltro] = useState(userId ? [userId] : []);
   const [empresaFiltro, setEmpresaFiltro] = useState(user?.role === "admin" ? (user.empresa?._id || user.empresa) : "");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -35,6 +37,15 @@ export default function FichajesSection() {
     if (token) cargarMeta();
     // eslint-disable-next-line
   }, [token]);
+
+  // Pre-selecciona usuario si viene en la ruta
+  useEffect(() => {
+    if (userId) {
+      setUsuarioFiltro([userId]);
+      setPaginaActual(1);
+    }
+    // eslint-disable-next-line
+  }, [userId]);
 
   const construirQuery = () => {
     const params = new URLSearchParams();
@@ -151,7 +162,17 @@ export default function FichajesSection() {
     const worksheet = XLSX.utils.json_to_sheet(filas);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Fichajes");
-    XLSX.writeFile(workbook, `fichajes_${tipoFiltro}_${fecha || fromDate || "todos"}.xlsx`);
+
+    // Obtener nombre de empresa
+    const empresaSeleccionada = empresas.find(e => e._id === empresaFiltro);
+    const empresaNombre = empresaSeleccionada?.nombre || "todos";
+    
+    // Formato de fecha para el nombre
+    const dateObj = fecha ? new Date(fecha) : new Date();
+    const fechaFormato = dateObj.toLocaleDateString("es-ES").replace(/\//g, "-");
+    
+    const nombreArchivo = `fichajes_${empresaNombre}_${tipoFiltro}_${fechaFormato}.xlsx`;
+    XLSX.writeFile(workbook, nombreArchivo);
   };
 
   const agrupado = agruparFichajes();
@@ -295,51 +316,39 @@ export default function FichajesSection() {
           <p>No hay fichajes</p>
         ) : (
           <>
-            {/* Paginación arriba */}
-            <div className="flex justify-center items-center gap-2 mb-4 flex-wrap">
-              <button
-                onClick={() => setPaginaActual(Math.max(1, paginaActual - 1))}
-                disabled={paginaActual === 1}
-                className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-              >
-                &lt;
-              </button>
+            {/* Paginación arriba: formato 1-50 /700   < > */}
+            <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
+              <div className="text-sm text-gray-700">
+                {agrupado.length > 0
+                  ? `${inicio + 1}-${Math.min(agrupado.length, fin)} / ${agrupado.length}`
+                  : "0-0 / 0"}
+              </div>
 
-              {generarNumeroPaginas().map((num) => (
+              <div className="flex items-center gap-2">
                 <button
-                  key={num}
-                  onClick={() => setPaginaActual(num)}
-                  className={`px-2 py-1 border rounded ${
-                    paginaActual === num
-                      ? "bg-indigo-600 text-white"
-                      : "hover:bg-gray-100"
-                  }`}
+                  onClick={() => setPaginaActual(Math.max(1, paginaActual - 1))}
+                  disabled={paginaActual === 1}
+                  className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
                 >
-                  {num}
+                  &lt;
                 </button>
-              ))}
 
-              <span className="text-sm text-gray-600">-</span>
-
-              <button
-                onClick={() => setPaginaActual(Math.min(totalPaginas, paginaActual + 1))}
-                disabled={paginaActual === totalPaginas}
-                className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-              >
-                &gt;
-              </button>
-
-              <span className="text-sm text-gray-600 ml-2">
-                {totalPaginas > 0 ? `${agrupadoPaginado.length}/${agrupado.length}` : "0/0"}
-              </span>
+                <button
+                  onClick={() => setPaginaActual(Math.min(totalPaginas, paginaActual + 1))}
+                  disabled={paginaActual === totalPaginas || totalPaginas === 0}
+                  className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                >
+                  &gt;
+                </button>
+              </div>
             </div>
 
-            <table className="w-full border-collapse border border-gray-300">
+            <table className="w-full border-collapse border border-gray-300 table-fixed">
               <thead className="bg-gray-100">
                 <tr>
-                  <th className="p-3 border border-gray-300 text-left">Perfil</th>
-                  <th className="p-3 border border-gray-300 text-left">Nombre</th>
-                  <th className="p-3 border border-gray-300 text-left">Fecha</th>
+                  <th className="p-3 border border-gray-300 text-left w-28">Perfil</th>
+                  <th className="p-3 border border-gray-300 text-left w-64">Nombre</th>
+                  <th className="p-3 border border-gray-300 text-left w-36">Fecha</th>
                   <th className="p-3 border border-gray-300 text-left">Fichajes del día</th>
                 </tr>
               </thead>
@@ -347,10 +356,8 @@ export default function FichajesSection() {
                 {agrupadoPaginado.map((item, idx) => (
                 <tr key={idx} className="border-b hover:bg-gray-50">
                   {/* Imagen de perfil (de la base de datos o placeholder) */}
-                  <td className="p-3 border border-gray-300">
+                  <td className="p-3 border border-gray-300 align-top">
                     {(() => {
-                      const nombreCompleto = `${item.userId?.nombre || ""} ${item.userId?.apellidos || ""}`.trim();
-
                       // item.userId puede ser objeto (populado) o solo id (string)
                       let usuarioDatos = null;
                       if (item.userId && typeof item.userId === "object") {
@@ -360,10 +367,14 @@ export default function FichajesSection() {
                         usuarioDatos = usuarios.find((u) => String(u._id) === String(item.userId)) || null;
                       }
 
+                      const nombreCompleto = usuarioDatos
+                        ? `${usuarioDatos.nombre || ""} ${usuarioDatos.apellidos || ""}`.trim()
+                        : "Desconocido";
+
                       const imagenPerfil = usuarioDatos?.imagenPerfil;
 
                       // determinar URL final: si es absolute (http/https) usarla tal cual, si es relativa (empieza por /) prefijar BACKEND_URL
-                      let urlImg = `https://ui-avatars.com/api/?name=${encodeURIComponent(nombreCompleto || "-")}&background=ddd&color=333&size=64`;
+                      let urlImg = `https://ui-avatars.com/api/?name=${encodeURIComponent(nombreCompleto || "-")}&background=ddd&color=333&size=128`;
                       if (imagenPerfil && typeof imagenPerfil === "string" && imagenPerfil.trim() !== "") {
                         if (/^https?:\/\//i.test(imagenPerfil)) {
                           urlImg = imagenPerfil;
@@ -373,16 +384,13 @@ export default function FichajesSection() {
                         }
                       }
 
-                      // console.debug para inspección rápida (puedes quitarlo después)
-                      console.debug("Fichajes - img", { nombreCompleto, imagenPerfil, urlImg });
-
                       return (
                         <img
                           src={urlImg}
                           alt={nombreCompleto}
-                          className="w-12 h-12 rounded-full object-cover"
+                          className="w-20 h-20 rounded-full object-cover"
                           onError={(e) => {
-                            e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(nombreCompleto || "-")}&background=ddd&color=333&size=64`;
+                            e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(nombreCompleto || "-")}&background=ddd&color=333&size=128`;
                           }}
                         />
                       );
@@ -390,7 +398,7 @@ export default function FichajesSection() {
                   </td>
 
                   {/* Nombre y apellidos */}
-                  <td className="p-3 border border-gray-300">
+                  <td className="p-3 border border-gray-300 align-top break-words whitespace-normal">
                     <div className="font-semibold">
                       {item.userId
                         ? `${item.userId.nombre} ${item.userId.apellidos}`
@@ -400,12 +408,12 @@ export default function FichajesSection() {
                   </td>
 
                   {/* Fecha */}
-                  <td className="p-3 border border-gray-300">
+                  <td className="p-3 border border-gray-300 align-top whitespace-normal">
                     {new Date(item.fecha).toLocaleDateString("es-ES")}
                   </td>
 
                   {/* Todos los fichajes del día */}
-                  <td className="p-3 border border-gray-300">
+                  <td className="p-3 border border-gray-300 align-top break-words whitespace-normal">
                     <div className="flex flex-wrap gap-2">
                       {item.registros.map((reg, regIdx) => {
                         const { icono, color, label } = getIconoYColor(reg.tipo);

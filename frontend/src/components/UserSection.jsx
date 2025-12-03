@@ -2,9 +2,11 @@ import React, { useEffect, useState, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import UserFormModal from "./UserFormModal";
 import { getUsers, deleteUser, BACKEND_URL } from "../api/api";
+import { useNavigate } from "react-router-dom";
 
 export default function UsersSection() {
   const { token } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [usuarios, setUsuarios] = useState([]);
   const [usuariosFiltrados, setUsuariosFiltrados] = useState([]);
   const [modalData, setModalData] = useState(null);
@@ -68,7 +70,7 @@ export default function UsersSection() {
       {/* CARDS*/}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {usuariosFiltrados.map((u) => (
-          <div key={u._id} className="bg-white p-4 rounded shadow flex items-center gap-4">
+          <div key={u._id} className="bg-white p-4 rounded shadow flex items-center gap-4 hover:shadow-lg transition cursor-pointer" onClick={() => navigate(`/fichajes/${u._id}`)}>
             <img
               src={
                 u.imagenPerfil
@@ -85,8 +87,8 @@ export default function UsersSection() {
             </div>
 
             <div className="flex flex-col gap-2">
-              <button onClick={() => setModalData(u)} className="text-yellow-500 hover:text-yellow-600">✏️</button>
-              <button onClick={() => setConfirmDelete(u._id)} className="text-red-500 hover:text-red-600">🗑️</button>
+              <button onClick={(e) => { e.stopPropagation(); setModalData(u); }} className="text-yellow-500 hover:text-yellow-600">✏️</button>
+              <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(u._id); }} className="text-red-500 hover:text-red-600">🗑️</button>
             </div>
           </div>
         ))}

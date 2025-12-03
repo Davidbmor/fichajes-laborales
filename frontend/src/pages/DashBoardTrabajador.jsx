@@ -1,9 +1,11 @@
 import React, { useContext, useState, useEffect } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { fichar, getFichajes, BACKEND_URL } from "../api/api";
+import { useNavigate } from "react-router-dom";
 
 export default function DashboardTrabajador() {
   const { token, user, logout } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [mensaje, setMensaje] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -147,6 +149,16 @@ export default function DashboardTrabajador() {
         >
           Ver mis fichajes
         </button>
+
+        {(user?.role === "admin") && (
+          <button
+            onClick={() => navigate("/admin-home")}
+            className="bg-blue-600 text-white py-2 rounded hover:bg-blue-700 flex items-center justify-center gap-2"
+          >
+            <i className="fas fa-arrow-left"></i>
+            Volver al Panel
+          </button>
+        )}
 
         <button
           onClick={logout}

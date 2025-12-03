@@ -2,10 +2,21 @@ import React, { useState, useEffect, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import UsersSection from "../components/UserSection";
 import FichajesSection from "../components/FichajesSection";
+import { useNavigate, useParams } from "react-router-dom";
 
 export default function DashboardAdmin() {
   const { logout, user } = useContext(AuthContext);
-  const [section, setSection] = useState("usuarios");
+  const navigate = useNavigate();
+  const { userId } = useParams();
+  const [section, setSection] = useState(userId ? "fichajes" : "usuarios");
+
+  // Si viene userId en la ruta, establece la sección a fichajes
+  useEffect(() => {
+    if (userId) {
+      setSection("fichajes");
+    }
+    // eslint-disable-next-line
+  }, [userId]);
 
   return (
     <div className="flex min-h-screen bg-gray-100">
@@ -38,7 +49,23 @@ export default function DashboardAdmin() {
           >
             Fichajes
           </button>
+
+          <button
+            onClick={() => navigate("/trabajador")}
+            className="p-3 rounded text-left hover:bg-green-700 bg-green-600 flex items-center gap-2"
+          >
+            <i className="fas fa-clock"></i>
+            Fichar
+          </button>
         </nav>
+
+        <button
+          onClick={() => navigate("/admin-home")}
+          className="bg-blue-600 py-2 rounded hover:bg-blue-700 flex items-center justify-center gap-2"
+        >
+          <i className="fas fa-home"></i>
+          Inicio
+        </button>
 
         <button
           onClick={logout}
