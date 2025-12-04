@@ -7,6 +7,8 @@ import {
   eliminarEmpresa,
   BACKEND_URL,
   toggleEmpresaEnabled,
+  exportarEmpresa,
+  importarEmpresa,
 } from "../api/api";
 import { useNavigate } from "react-router-dom";
 
@@ -21,6 +23,7 @@ export default function EmpresasSection() {
   });
   const [errorMessage, setErrorMessage] = useState("");
   const [modalEliminar, setModalEliminar] = useState(null); // estado para modal de confirmación
+  const [importando, setImportando] = useState(false);
 
   useEffect(() => {
     cargarEmpresas();
@@ -71,10 +74,51 @@ export default function EmpresasSection() {
     });
   };
 
+  const handleExportar = async (empresaId) => {
+    try {
+      await exportarEmpresa(token, empresaId);
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || "Error exportando empresa");
+    }
+  };
+
+  const handleImportar = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setImportando(true);
+      setErrorMessage("");
+      const result = await importarEmpresa(token, file);
+      alert(`Empresa importada: ${result.empresa.nombre}\n${result.usuariosCreados} usuarios\n${result.fichajesToCreate} fichajes`);
+      cargarEmpresas();
+      e.target.value = ""; // limpiar input
+    } catch (err) {
+      console.error(err);
+      const msg = err.response?.data?.message || err.message || "Error importando empresa";
+      setErrorMessage(msg);
+      e.target.value = "";
+    } finally {
+      setImportando(false);
+    }
+  };
+
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-5">Gestión de Empresas</h1>
-
+      <div className="flex justify-between items-center mb-5">
+        <h1 className="text-3xl font-bold">Gestión de Empresas</h1>
+        <label className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 cursor-pointer disabled:opacity-50">
+          {importando ? "Importando..." : "📥 Importar"}
+          <input
+            type="file"
+            accept=".json"
+            onChange={handleImportar}
+            disabled={importando}
+            className="hidden"
+          />
+        </label>
+      </div>
       {/* FORM */}
       <form
         onSubmit={handleSubmit}
@@ -144,7 +188,7 @@ export default function EmpresasSection() {
               </h3>
 
               {/* ICONOS DE ACCIONES (detener propagación para que no navegue) */}
-              <div className="flex justify-center gap-6">
+              <div className="flex justify-center gap-3 flex-wrap">
                 <button
                   onClick={(ev) => {
                     ev.stopPropagation();
@@ -155,6 +199,18 @@ export default function EmpresasSection() {
                   aria-label={`Editar ${e.nombre}`}
                 >
                   <i className="fas fa-pen"></i>
+                </button>
+
+                <button
+                  onClick={(ev) => {
+                    ev.stopPropagation();
+                    handleExportar(e._id);
+                  }}
+                  className="text-blue-500 hover:text-blue-600 text-2xl transition"
+                  title="Exportar"
+                  aria-label={`Exportar ${e.nombre}`}
+                >
+                  📥
                 </button>
 
                 <button

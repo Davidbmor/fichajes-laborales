@@ -121,3 +121,30 @@ export const toggleEmpresaEnabled = async (token, id, habilitado) => {
   );
   return res.data;
 };
+
+// Exportar empresa (descarga JSON)
+export const exportarEmpresa = async (token, id) => {
+  const res = await axios.get(`${BASE_URL}/empresas/${id}/export`, {
+    headers: { Authorization: `Bearer ${token}` },
+    responseType: "blob",
+  });
+  // Crear descarga
+  const url = window.URL.createObjectURL(new Blob([res.data]));
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", `empresa_${new Date().toISOString().split("T")[0]}.json`);
+  document.body.appendChild(link);
+  link.click();
+  link.parentNode.removeChild(link);
+  window.URL.revokeObjectURL(url);
+};
+
+// Importar empresa desde JSON
+export const importarEmpresa = async (token, file) => {
+  const formData = new FormData();
+  formData.append("archivo", file);
+  const res = await axios.post(`${BASE_URL}/empresas/import`, formData, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
+};

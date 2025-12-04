@@ -3,7 +3,9 @@ import {
     crearEmpresa,
     obtenerEmpresas,
     actualizarEmpresa,
-    eliminarEmpresa
+    eliminarEmpresa,
+    exportarEmpresa,
+    importarEmpresa
 } from "../controllers/empresaController.js";
 
 import { protect } from "../middlewares/authmiddleware.js";
@@ -17,6 +19,12 @@ router.post("/", protect, esGlobalAdmin, uploadCompany.single("imagenPerfil"), c
 
 // Obtener empresas
 router.get("/", protect, obtenerEmpresas);
+
+// Exportar empresa (global admin)
+router.get("/:id/export", protect, esGlobalAdmin, exportarEmpresa);
+
+// Importar empresa (global admin)
+router.post("/import", protect, esGlobalAdmin, uploadCompany.single("archivo"), importarEmpresa);
 
 // Editar empresa
 router.put("/:id", protect, esGlobalAdmin, uploadCompany.single("imagenPerfil"), actualizarEmpresa);
