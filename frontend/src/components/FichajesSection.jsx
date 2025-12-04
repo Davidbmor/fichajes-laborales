@@ -134,13 +134,13 @@ export default function FichajesSection() {
   const getIconoYColor = (tipo) => {
     switch (tipo) {
       case "entrada":
-        return { icono: "✓", color: "bg-green-100 text-green-700", label: "Entrada" };
+        return { icono: <i className="fas fa-sign-in-alt"></i>, color: "bg-green-100 text-green-700 border border-green-300", label: "Entrada" };
       case "salida":
-        return { icono: "✗", color: "bg-red-100 text-red-700", label: "Salida" };
+        return { icono: <i className="fas fa-sign-out-alt"></i>, color: "bg-red-100 text-red-700 border border-red-300", label: "Salida" };
       case "ausencia":
-        return { icono: "—", color: "bg-gray-100 text-gray-700", label: "Ausencia" };
+        return { icono: <i className="fas fa-ban"></i>, color: "bg-gray-100 text-gray-700 border border-gray-300", label: "Ausencia" };
       default:
-        return { icono: "?", color: "bg-yellow-100 text-yellow-700", label: tipo };
+        return { icono: <i className="fas fa-question"></i>, color: "bg-yellow-100 text-yellow-700 border border-yellow-300", label: tipo };
     }
   };
 
@@ -214,29 +214,45 @@ export default function FichajesSection() {
   };
 
   return (
-    <div className="w-full p-6 bg-white shadow-md rounded-xl">
-      <h2 className="text-xl font-bold mb-4">Fichajes</h2>
+    <div className="p-4 md:p-6">
+      {/* Header con gradiente */}
+      <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-xl p-4 md:p-6 mb-4 md:mb-6 shadow-lg">
+        <h2 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-2 md:gap-3">
+          <i className="fas fa-clock"></i>
+          Fichajes
+        </h2>
+      </div>
 
-      <div className="flex flex-wrap gap-4 mb-4">
-        <select
-          value={tipoFiltro}
-          onChange={(e) => setTipoFiltro(e.target.value)}
-          className="border p-2 rounded"
-        >
-          <option value="dia">Por día</option>
-          <option value="mes">Por mes</option>
-          <option value="año">Por año</option>
-          <option value="rango">Rango de fechas</option>
-        </select>
+      {/* Sección de filtros */}
+      <div className="bg-white rounded-xl shadow-md p-4 md:p-6 mb-4 md:mb-6">
+        <h3 className="text-base md:text-lg font-semibold text-gray-700 mb-3 md:mb-4 flex items-center gap-2">
+          <i className="fas fa-filter text-indigo-500"></i>
+          Filtros
+        </h3>
+        <div className="flex gap-2 md:gap-3 flex-wrap">
+          {/* Tipo filtro (día/mes/año/rango) */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <i className="fas fa-calendar-alt text-gray-400 text-sm md:text-base"></i>
+            <select
+              value={tipoFiltro}
+              onChange={(e) => setTipoFiltro(e.target.value)}
+              className="border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white text-sm md:text-base flex-1 sm:flex-initial"
+            >
+              <option value="dia">Por día</option>
+              <option value="mes">Por mes</option>
+              <option value="año">Por año</option>
+              <option value="rango">Rango de fechas</option>
+            </select>
+          </div>
 
-        {tipoFiltro !== "rango" && (
-          <input
-            type="date"
-            value={fecha}
-            onChange={(e) => setFecha(e.target.value)}
-            className="border p-2 rounded"
-          />
-        )}
+          {tipoFiltro !== "rango" && (
+            <input
+              type="date"
+              value={fecha}
+              onChange={(e) => setFecha(e.target.value)}
+              className="border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm md:text-base w-full sm:w-auto"
+            />
+          )}
 
         {tipoFiltro === "rango" && (
           <>
@@ -244,43 +260,50 @@ export default function FichajesSection() {
               type="date"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
-              className="border p-2 rounded"
+              className="border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm md:text-base w-full sm:w-auto"
             />
             <input
               type="date"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
-              className="border p-2 rounded"
+              className="border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm md:text-base w-full sm:w-auto"
             />
           </>
         )}
 
         {/* Grupo / Empresa (solo visible para global_admin) */}
         {user?.role === "global_admin" && (
-          <select
-            value={empresaFiltro || ""}
-            onChange={(e) => setEmpresaFiltro(e.target.value)}
-            className="border p-2 rounded"
-          >
-            <option value="">Todos los grupos</option>
-            {empresas.map((c) => (
-              <option key={c._id} value={c._id}>
-                {c.nombre}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <i className="fas fa-building text-gray-400 text-sm md:text-base"></i>
+            <select
+              value={empresaFiltro || ""}
+              onChange={(e) => setEmpresaFiltro(e.target.value)}
+              className="border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white text-sm md:text-base flex-1 sm:flex-initial"
+            >
+              <option value="">Todos los grupos</option>
+              {empresas.map((c) => (
+                <option key={c._id} value={c._id}>
+                  {c.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
         )}
 
         {/* Filtro de usuarios con dropdown de checkboxes */}
-        <div className="relative">
+        <div className="relative w-full sm:w-auto">
           <button
             onClick={() => setUsuariosDropdownAbierto(!usuariosDropdownAbierto)}
-            className="border p-2 rounded bg-white hover:bg-gray-50 w-64"
+            className="border border-gray-300 p-2 rounded-lg bg-white hover:bg-gray-50 w-full sm:w-64 flex items-center justify-between gap-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm md:text-base"
           >
-            {usuarioFiltro.length === 0 ? "Todos los trabajadores" : `${usuarioFiltro.length} seleccionado(s)`} ▼
+            <div className="flex items-center gap-2">
+              <i className="fas fa-users text-gray-400"></i>
+              <span className="truncate">{usuarioFiltro.length === 0 ? "Todos los trabajadores" : `${usuarioFiltro.length} seleccionado(s)`}</span>
+            </div>
+            <i className={`fas fa-chevron-${usuariosDropdownAbierto ? 'up' : 'down'} text-gray-400`}></i>
           </button>
           {usuariosDropdownAbierto && (
-            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-300 rounded shadow-lg z-10 w-64 max-h-60 overflow-y-auto">
+            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-xl z-10 w-full sm:w-64 max-h-60 overflow-y-auto">
               <div className="p-2 border-b">
                 <button
                   onClick={() => {
@@ -329,69 +352,91 @@ export default function FichajesSection() {
           )}
         </div>
 
-        {/* multi-select usuarios */}
-        <button
-          onClick={cargarFichajes}
-          className="bg-indigo-600 text-white px-4 py-2 rounded"
-        >
-          Buscar
-        </button>
-        <button
-          onClick={exportarExcel}
-          className="bg-green-600 text-white px-4 py-2 rounded"
-        >
-          📤 Exportar Excel
-        </button>
+          {/* Botones de acción */}
+          <button
+            onClick={cargarFichajes}
+            className="bg-indigo-600 text-white px-3 md:px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 font-semibold shadow-md text-sm md:text-base w-full sm:w-auto"
+          >
+            <i className="fas fa-search"></i>
+            <span className="hidden sm:inline">Buscar</span>
+          </button>
+          <button
+            onClick={exportarExcel}
+            className="bg-green-600 text-white px-3 md:px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 font-semibold shadow-md text-sm md:text-base w-full sm:w-auto"
+          >
+            <i className="fas fa-file-excel"></i>
+            <span className="hidden sm:inline">Exportar Excel</span>
+          </button>
+        </div>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* Tabla de fichajes */}
+      <div className="bg-white rounded-xl shadow-md overflow-hidden">
         {loading ? (
-          <p>Cargando...</p>
+          <div className="p-8 text-center">
+            <i className="fas fa-spinner fa-spin text-4xl text-indigo-500 mb-3"></i>
+            <p className="text-gray-600">Cargando fichajes...</p>
+          </div>
         ) : agrupado.length === 0 ? (
-          <p>No hay fichajes</p>
+          <div className="p-8 text-center">
+            <i className="fas fa-inbox text-6xl text-gray-300 mb-3"></i>
+            <p className="text-gray-600 text-lg">No hay fichajes para mostrar</p>
+          </div>
         ) : (
           <>
-            {/* Paginación arriba: formato 1-50 /700   < > */}
-            <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
-              <div className="text-sm text-gray-700">
-                {agrupado.length > 0
-                  ? `${inicio + 1}-${Math.min(agrupado.length, fin)} / ${agrupado.length}`
-                  : "0-0 / 0"}
+            {/* Paginación arriba */}
+            <div className="flex items-center justify-between gap-2 md:gap-4 p-3 md:p-4 bg-gray-50 border-b border-gray-200">
+              <div className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-gray-700">
+                <i className="fas fa-info-circle text-indigo-500"></i>
+                <span className="font-semibold">
+                  {agrupado.length > 0
+                    ? `${inicio + 1}-${Math.min(agrupado.length, fin)} / ${agrupado.length}`
+                    : "0-0 / 0"}
+                </span>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 md:gap-2">
                 <button
                   onClick={() => setPaginaActual(Math.max(1, paginaActual - 1))}
                   disabled={paginaActual === 1}
-                  className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                  className="px-2 md:px-3 py-1.5 md:py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors flex items-center gap-1 text-sm md:text-base"
                 >
-                  &lt;
+                  <i className="fas fa-chevron-left"></i>
                 </button>
 
                 <button
                   onClick={() => setPaginaActual(Math.min(totalPaginas, paginaActual + 1))}
                   disabled={paginaActual === totalPaginas || totalPaginas === 0}
-                  className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                  className="px-2 md:px-3 py-1.5 md:py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors flex items-center gap-1 text-sm md:text-base"
                 >
-                  &gt;
+                  <i className="fas fa-chevron-right"></i>
                 </button>
               </div>
             </div>
 
-            <table className="w-full border-collapse border border-gray-300 table-fixed">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="p-3 border border-gray-300 text-left w-28">Perfil</th>
-                  <th className="p-3 border border-gray-300 text-left w-64">Nombre</th>
-                  <th className="p-3 border border-gray-300 text-left w-36">Fecha</th>
-                  <th className="p-3 border border-gray-300 text-left">Fichajes del día</th>
-                </tr>
-              </thead>
+            <div className="overflow-x-auto -mx-4 md:mx-0">
+              <table className="w-full table-fixed min-w-[600px]">
+                <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+                  <tr>
+                    <th className="p-2 md:p-4 text-left w-20 md:w-28 font-semibold text-gray-700 border-b-2 border-gray-200 text-xs md:text-sm">
+                      <i className="fas fa-user-circle mr-1 md:mr-2"></i><span className="hidden sm:inline">Perfil</span>
+                    </th>
+                    <th className="p-2 md:p-4 text-left w-48 md:w-64 font-semibold text-gray-700 border-b-2 border-gray-200 text-xs md:text-sm">
+                      <i className="fas fa-user mr-1 md:mr-2"></i>Nombre
+                    </th>
+                    <th className="p-2 md:p-4 text-left w-28 md:w-36 font-semibold text-gray-700 border-b-2 border-gray-200 text-xs md:text-sm">
+                      <i className="fas fa-calendar-day mr-1 md:mr-2"></i>Fecha
+                    </th>
+                    <th className="p-2 md:p-4 text-left font-semibold text-gray-700 border-b-2 border-gray-200 text-xs md:text-sm">
+                      <i className="fas fa-clock mr-1 md:mr-2"></i>Fichajes
+                    </th>
+                  </tr>
+                </thead>
               <tbody>
                 {agrupadoPaginado.map((item, idx) => (
-                <tr key={idx} className="border-b hover:bg-gray-50">
+                <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                   {/* Imagen de perfil (de la base de datos o placeholder) */}
-                  <td className="p-3 border border-gray-300 align-top">
+                  <td className="p-2 md:p-4 align-top">
                     {(() => {
                       // item.userId puede ser objeto (populado) o solo id (string)
                       let usuarioDatos = null;
@@ -423,7 +468,7 @@ export default function FichajesSection() {
                         <img
                           src={urlImg}
                           alt={nombreCompleto}
-                          className="w-20 h-20 rounded-full object-cover"
+                          className="w-12 h-12 md:w-20 md:h-20 rounded-full object-cover border-2 md:border-4 border-white shadow-md"
                           onError={(e) => {
                             e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(nombreCompleto || "-")}&background=ddd&color=333&size=128`;
                           }}
@@ -433,23 +478,29 @@ export default function FichajesSection() {
                   </td>
 
                   {/* Nombre y apellidos */}
-                  <td className="p-3 border border-gray-300 align-top break-words whitespace-normal">
-                    <div className="font-semibold">
+                  <td className="p-2 md:p-4 align-top break-words whitespace-normal">
+                    <div className="font-bold text-gray-800 text-sm md:text-lg">
                       {item.userId
                         ? `${item.userId.nombre} ${item.userId.apellidos}`
                         : "Desconocido"}
                     </div>
-                    <div className="text-sm text-gray-600">{item.userId?.email}</div>
+                    <div className="text-xs md:text-sm text-gray-500 flex items-center gap-1 mt-1">
+                      <i className="fas fa-envelope text-xs"></i>
+                      <span className="truncate">{item.userId?.email}</span>
+                    </div>
                   </td>
 
                   {/* Fecha */}
-                  <td className="p-3 border border-gray-300 align-top whitespace-normal">
-                    {new Date(item.fecha).toLocaleDateString("es-ES")}
+                  <td className="p-2 md:p-4 align-top whitespace-normal">
+                    <div className="flex flex-col md:flex-row items-start md:items-center gap-1 md:gap-2 text-gray-700">
+                      <i className="fas fa-calendar text-indigo-500 text-sm"></i>
+                      <span className="font-semibold text-xs md:text-sm">{new Date(item.fecha).toLocaleDateString("es-ES")}</span>
+                    </div>
                   </td>
 
                   {/* Todos los fichajes del día */}
-                  <td className="p-3 border border-gray-300 align-top break-words whitespace-normal">
-                    <div className="flex flex-wrap gap-2">
+                  <td className="p-2 md:p-4 align-top break-words whitespace-normal">
+                    <div className="flex flex-wrap gap-1.5 md:gap-2">
                       {item.registros.map((reg, regIdx) => {
                         const { icono, color, label } = getIconoYColor(reg.tipo);
                         const hora = new Date(reg.fecha).toLocaleTimeString(
@@ -462,11 +513,11 @@ export default function FichajesSection() {
                         return (
                           <div
                             key={regIdx}
-                            className={`${color} px-3 py-1 rounded text-sm font-semibold flex items-center gap-1`}
+                            className={`${color} px-2 md:px-3 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-semibold flex items-center gap-1 md:gap-2 shadow-sm`}
                           >
-                            <span>{icono}</span>
-                            <span>{label}</span>
-                            <span className="text-gray-700 ml-1">{hora}</span>
+                            {icono}
+                            <span className="hidden sm:inline">{label}</span>
+                            <span className="font-mono">{hora}</span>
                           </div>
                         );
                       })}
@@ -478,22 +529,22 @@ export default function FichajesSection() {
             </table>
 
             {/* Paginación abajo */}
-            <div className="flex justify-center items-center gap-2 mt-4 flex-wrap">
+            <div className="flex justify-center items-center gap-1 md:gap-2 p-3 md:p-4 bg-gray-50 border-t border-gray-200">
               <button
                 onClick={() => setPaginaActual(Math.max(1, paginaActual - 1))}
                 disabled={paginaActual === 1}
-                className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                className="px-2 md:px-3 py-1.5 md:py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors flex items-center gap-1 text-sm md:text-base"
               >
-                &lt;
+                <i className="fas fa-chevron-left"></i>
               </button>
 
               {generarNumeroPaginas().map((num) => (
                 <button
                   key={num}
                   onClick={() => setPaginaActual(num)}
-                  className={`px-2 py-1 border rounded ${
+                  className={`px-2 md:px-3 py-1.5 md:py-2 border border-gray-300 rounded-lg transition-colors text-sm md:text-base ${
                     paginaActual === num
-                      ? "bg-indigo-600 text-white"
+                      ? "bg-indigo-600 text-white border-indigo-600 shadow-md"
                       : "hover:bg-gray-100"
                   }`}
                 >
@@ -501,15 +552,18 @@ export default function FichajesSection() {
                 </button>
               ))}
 
-              <span className="text-sm text-gray-600">-</span>
+              {totalPaginas > generarNumeroPaginas()[generarNumeroPaginas().length - 1] && (
+                <span className="text-gray-400 px-1 md:px-2 text-sm">...</span>
+              )}
 
               <button
                 onClick={() => setPaginaActual(Math.min(totalPaginas, paginaActual + 1))}
                 disabled={paginaActual === totalPaginas}
-                className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                className="px-2 md:px-3 py-1.5 md:py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors flex items-center gap-1 text-sm md:text-base"
               >
-                &gt;
+                <i className="fas fa-chevron-right"></i>
               </button>
+            </div>
             </div>
           </>
         )}
