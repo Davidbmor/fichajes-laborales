@@ -63,6 +63,16 @@ export const deleteUser = async (token, id) => {
   return res.data;
 };
 
+// Toggle habilitado usuario
+export const toggleUserEnabled = async (token, id, habilitado) => {
+  const res = await axios.put(
+    `${BASE_URL}/users/${id}/habilitar`,
+    { habilitado },
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return res.data;
+};
+
 // ---------------------- EMPRESAS ----------------------
 
 // Obtener todas las empresas
@@ -100,4 +110,14 @@ export const eliminarEmpresa = async (token, id) => {
   return axios.delete(`${BASE_URL}/empresas/${id}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
+};
+
+// Toggle habilitado empresa
+export const toggleEmpresaEnabled = async (token, id, habilitado) => {
+  const res = await axios.put(
+    `${BASE_URL}/empresas/${id}/habilitar`,
+    { habilitado },
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return res.data;
 };

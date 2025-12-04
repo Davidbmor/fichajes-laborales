@@ -23,7 +23,8 @@ export const crearEmpresa = async (req, res) => {
 
     const empresa = await Empresa.create({
       nombre,
-      imagenUrl
+      imagenUrl,
+      habilitado: true,
     });
 
     res.status(201).json(empresa);
@@ -68,6 +69,21 @@ export const actualizarEmpresa = async (req, res) => {
     }
 
     const empresa = await Empresa.findByIdAndUpdate(req.params.id, updates, { new: true });
+
+    // Propagar cambio de habilitado a todos los usuarios de la empresa
+    if (typeof updates.habilitado !== "undefined") {
+      try {
+        if (updates.habilitado === false) {
+          // Deshabilitar todos los usuarios
+          await User.updateMany({ empresa: req.params.id }, { habilitado: false });
+        } else {
+          // Habilitar todos los usuarios
+          await User.updateMany({ empresa: req.params.id }, { habilitado: true });
+        }
+      } catch (err) {
+        console.warn("No se pudo propagar habilitado a usuarios:", err.message);
+      }
+    }
 
     res.json(empresa);
 

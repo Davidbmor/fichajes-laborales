@@ -19,6 +19,7 @@ export default function FichajesSection() {
   const [toDate, setToDate] = useState("");
   const [loading, setLoading] = useState(false);
   const [paginaActual, setPaginaActual] = useState(1);
+  const [usuariosDropdownAbierto, setUsuariosDropdownAbierto] = useState(false);
   const itemsPorPagina = 30;
 
   useEffect(() => {
@@ -47,6 +48,12 @@ export default function FichajesSection() {
     // eslint-disable-next-line
   }, [userId]);
 
+  // Limpiar filtro de usuarios cuando cambia la empresa (para evitar usuarios de otras empresas)
+  useEffect(() => {
+    setUsuarioFiltro([]);
+    // eslint-disable-next-line
+  }, [empresaFiltro]);
+
   const construirQuery = () => {
     const params = new URLSearchParams();
 
@@ -66,11 +73,14 @@ export default function FichajesSection() {
 
     if (Array.isArray(usuarioFiltro) && usuarioFiltro.length > 0) {
       params.append("usuarios", usuarioFiltro.join(","));
+      console.log("Query con usuarios filtrados:", usuarioFiltro);
     } else {
       params.append("usuarios", "all");
+      console.log("Query con todos los usuarios");
     }
 
     const q = params.toString() ? `?${params.toString()}` : "";
+    console.log("URL completa:", `/api/fichajes${q}`);
     return q;
   };
 
@@ -261,40 +271,65 @@ export default function FichajesSection() {
           </select>
         )}
 
-        {/* multi-select usuarios */}
-        <select
-          multiple
-          value={usuarioFiltro}
-          onChange={(e) =>
-            setUsuarioFiltro(
-              Array.from(e.target.selectedOptions).map((o) => o.value)
-            )
-          }
-          className="border p-2 rounded max-h-48 overflow-auto"
-        >
-          <option value="">Todos los trabajadores</option>
-          {usuarios
-            .filter((u) => {
-              // normalizar empresaId
-              const userEmpresaId = u.empresa ? (typeof u.empresa === "object" ? String(u.empresa._id) : String(u.empresa)) : null;
-              
-              if (empresaFiltro)
-                return userEmpresaId === String(empresaFiltro);
-              
-              if (user?.role === "admin") {
-                const adminEmpresaId = user.empresa ? (typeof user.empresa === "object" ? String(user.empresa._id) : String(user.empresa)) : null;
-                return userEmpresaId === adminEmpresaId;
-              }
-              
-              return true;
-            })
-            .map((u) => (
-              <option key={u._id} value={u._id}>
-                {u.nombre} {u.apellidos} ({u.email})
-              </option>
-            ))}
-        </select>
+        {/* Filtro de usuarios con dropdown de checkboxes */}
+        <div className="relative">
+          <button
+            onClick={() => setUsuariosDropdownAbierto(!usuariosDropdownAbierto)}
+            className="border p-2 rounded bg-white hover:bg-gray-50 w-64"
+          >
+            {usuarioFiltro.length === 0 ? "Todos los trabajadores" : `${usuarioFiltro.length} seleccionado(s)`} ▼
+          </button>
+          {usuariosDropdownAbierto && (
+            <div className="absolute top-full left-0 mt-2 bg-white border border-gray-300 rounded shadow-lg z-10 w-64 max-h-60 overflow-y-auto">
+              <div className="p-2 border-b">
+                <button
+                  onClick={() => {
+                    setUsuarioFiltro([]);
+                    setUsuariosDropdownAbierto(false);
+                  }}
+                  className="text-sm text-gray-600 hover:text-gray-900 w-full text-left px-2 py-1"
+                >
+                  Limpiar selección
+                </button>
+              </div>
+              {usuarios
+                .filter((u) => {
+                  const userEmpresaId = u.empresa ? (typeof u.empresa === "object" ? String(u.empresa._id) : String(u.empresa)) : null;
+                  if (empresaFiltro) return userEmpresaId === String(empresaFiltro);
+                  if (user?.role === "admin") {
+                    const adminEmpresaId = user.empresa ? (typeof user.empresa === "object" ? String(user.empresa._id) : String(user.empresa)) : null;
+                    return userEmpresaId === adminEmpresaId;
+                  }
+                  return true;
+                })
+                .map((u) => (
+                  <label key={u._id} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={usuarioFiltro.includes(u._id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          const nuevoFiltro = [...usuarioFiltro, u._id];
+                          setUsuarioFiltro(nuevoFiltro);
+                          console.log("Usuario seleccionado:", u._id, "Filtro actualizado:", nuevoFiltro);
+                        } else {
+                          const nuevoFiltro = usuarioFiltro.filter((id) => id !== u._id);
+                          setUsuarioFiltro(nuevoFiltro);
+                          console.log("Usuario deseleccionado:", u._id, "Filtro actualizado:", nuevoFiltro);
+                        }
+                      }}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm">
+                      {u.nombre} {u.apellidos}
+                    </span>
+                  </label>
+                ))}
+            </div>
+          )}
+        </div>
 
+        {/* multi-select usuarios */}
         <button
           onClick={cargarFichajes}
           className="bg-indigo-600 text-white px-4 py-2 rounded"

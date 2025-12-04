@@ -9,6 +9,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mensaje, setMensaje] = useState("");
+  const [disabledModal, setDisabledModal] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -22,7 +23,11 @@ export default function Login() {
       // Solo navegar a la raíz, AppRouter redirigirá al lugar correcto
       navigate("/");
     } catch (err) {
-      setMensaje(err.response?.data?.message || "Error al iniciar sesión");
+      const msg = err.response?.data?.message || "Error al iniciar sesión";
+      setMensaje(msg);
+      if (err.response?.status === 403 && /deshabilad/i.test(msg)) {
+        setDisabledModal(true);
+      }
     }
   };
 
@@ -56,6 +61,18 @@ export default function Login() {
           </button>
         </form>
       </div>
+      {disabledModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+            <h3 className="text-xl font-bold mb-3">Acceso denegado</h3>
+            <p className="mb-4">Tu usuario o la empresa asociada se encuentra deshabilitada. Contacta con un administrador para más información.</p>
+            <div className="flex justify-end">
+              <button onClick={() => setDisabledModal(false)} className="bg-indigo-600 text-white px-4 py-2 rounded">Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

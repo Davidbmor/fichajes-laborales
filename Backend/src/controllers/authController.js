@@ -44,6 +44,11 @@ export const login = async (req, res) => {
     const user = await User.findOne({ email }).select("+password").populate("empresa", "nombre imagenUrl");
     if (!user) return res.status(400).json({ message: "Usuario no encontrado" });
 
+    // Si el usuario está deshabilitado o su empresa está deshabilitada, no permitir login
+    if (user.habilitado === false || (user.empresa && user.empresa.habilitado === false)) {
+      return res.status(403).json({ message: "Usuario deshabilitado" });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: "Contraseña incorrecta" });
 

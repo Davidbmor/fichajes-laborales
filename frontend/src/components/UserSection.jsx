@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import UserFormModal from "./UserFormModal";
-import { getUsers, deleteUser, BACKEND_URL } from "../api/api";
+import { getUsers, deleteUser, BACKEND_URL, toggleUserEnabled } from "../api/api";
 import { useNavigate } from "react-router-dom";
 
 export default function UsersSection() {
-  const { token } = useContext(AuthContext);
+  const { token, user: currentUser } = useContext(AuthContext);
   const navigate = useNavigate();
   const [usuarios, setUsuarios] = useState([]);
   const [usuariosFiltrados, setUsuariosFiltrados] = useState([]);
@@ -87,8 +87,32 @@ export default function UsersSection() {
             </div>
 
             <div className="flex flex-col gap-2">
-              <button onClick={(e) => { e.stopPropagation(); setModalData(u); }} className="text-yellow-500 hover:text-yellow-600">✏️</button>
-              <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(u._id); }} className="text-red-500 hover:text-red-600">🗑️</button>
+                <button onClick={(e) => { e.stopPropagation(); setModalData(u); }} className="text-yellow-500 hover:text-yellow-600">✏️</button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setConfirmDelete(u._id); }} 
+                  className={`${currentUser?._id === u._id ? 'text-gray-300 cursor-not-allowed' : 'text-red-500 hover:text-red-600'}`}
+                  disabled={currentUser?._id === u._id}
+                  title={currentUser?._id === u._id ? 'No puedes eliminarte a ti mismo' : 'Eliminar'}
+                >
+                  🗑️
+                </button>
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    try {
+                      await toggleUserEnabled(token, u._id, !u.habilitado);
+                      cargarUsuarios();
+                    } catch (err) {
+                      console.error(err);
+                      alert(err.response?.data?.message || "Error cambiando estado de usuario");
+                    }
+                  }}
+                  className={`text-sm ${currentUser?._id === u._id ? 'text-gray-400 cursor-not-allowed' : u.habilitado ? 'text-green-600' : 'text-gray-400'}`}
+                  disabled={currentUser?._id === u._id}
+                  title={currentUser?._id === u._id ? 'No puedes deshabilitarte a ti mismo' : (u.habilitado ? 'Deshabilitar usuario' : 'Habilitar usuario')}
+                >
+                  {u.habilitado ? 'Activo' : 'Deshabilitado'}
+                </button>
             </div>
           </div>
         ))}

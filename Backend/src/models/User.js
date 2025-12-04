@@ -10,6 +10,7 @@ const UserSchema = new mongoose.Schema(
     role: { type: String, enum: ["trabajador", "admin", "global_admin"], default: "trabajador" },
     imagenPerfil: { type: String, default: "" },
     empresa: { type: mongoose.Schema.Types.ObjectId, ref: "Empresa", default: null },
+      habilitado: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

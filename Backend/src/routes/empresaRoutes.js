@@ -21,6 +21,12 @@ router.get("/", protect, obtenerEmpresas);
 // Editar empresa
 router.put("/:id", protect, esGlobalAdmin, uploadCompany.single("imagenPerfil"), actualizarEmpresa);
 
+// Habilitar / deshabilitar empresa (global admin)
+router.put("/:id/habilitar", protect, esGlobalAdmin, async (req, res, next) => {
+    // delegar a controlador de empresa reutilizando actualizarEmpresa
+    await actualizarEmpresa(req, res, next);
+});
+
 // Eliminar empresa
 router.delete("/:id", protect, esGlobalAdmin, eliminarEmpresa);
 

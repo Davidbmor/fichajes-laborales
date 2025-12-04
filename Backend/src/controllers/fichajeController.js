@@ -53,29 +53,42 @@ export const obtenerFichajesFiltrados = async (req, res) => {
     }
 
     // --- Usuarios / grupos ---
-    // prioridad: 'usuarios' param, luego 'usuario' legacy, luego 'empresa' param, luego role del requester
+    // prioridad: 'usuarios' param tiene prioridad, si no está 'empresa' param, si no 'role' del requester
     const usuariosParam = (usuarios || usuario || "").toString().trim();
+    
+    console.log("obtenerFichajesFiltrados - params:", { usuarios, usuario, empresa, usuariosParam });
 
-    // Si piden filtrar por empresa (grupo)
-    if (empresa) {
+    // Si especifican usuarios explícitamente, usarlos directamente
+    if (usuariosParam && usuariosParam !== "all") {
+      const arr = usuariosParam.split(",").map((s) => s.trim()).filter(Boolean);
+      if (arr.length === 1) filtro.userId = arr[0];
+      else filtro.userId = { $in: arr };
+      console.log("Filtro por usuarios específicos:", arr);
+    } 
+    // Si piden filtrar por empresa (grupo) - solo si no hay usuarios específicos
+    else if (empresa) {
       // obtener ids de usuarios de esa empresa
       const usersCompany = await User.find({ empresa }).select("_id");
       const ids = usersCompany.map((u) => u._id);
       filtro.userId = { $in: ids };
-    } else if (usuariosParam && usuariosParam !== "all") {
-      const arr = usuariosParam.split(",").map((s) => s.trim()).filter(Boolean);
-      if (arr.length === 1) filtro.userId = arr[0];
-      else filtro.userId = { $in: arr };
-    } else {
-      // usuariosParam es "all" o vacío -> aplicar restricción según rol del requester
+      console.log("Filtro por empresa:", ids);
+    } 
+    // Si no hay filtro explícito, aplicar restricción según rol del requester
+    else {
       if (req.user.role === "admin") {
         // limitar a todos los usuarios de la empresa del admin
         const usersCompany = await User.find({ empresa: req.user.empresa }).select("_id");
         const ids = usersCompany.map((u) => u._id);
         filtro.userId = { $in: ids };
+        console.log("Filtro admin empresa:", ids);
       }
       // si es global_admin y no se especificó nada, dejamos sin filtro de usuario (todos)
+      else {
+        console.log("Sin filtro usuario (global_admin, todos)");
+      }
     }
+
+    console.log("Filtro final:", filtro);
 
     // Ejecutar consulta con populate
     const fichajes = await Fichaje.find(filtro).populate("userId", "nombre apellidos email empresa imagenPerfil").sort({ fecha: 1 });

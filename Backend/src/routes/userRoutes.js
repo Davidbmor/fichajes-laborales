@@ -3,7 +3,8 @@ import {
   obtenerUsuarios,
   actualizarUsuario,
   crearUsuario,
-  eliminarUsuario
+  eliminarUsuario,
+  toggleUsuario
 } from "../controllers/userController.js";
 
 import { protect } from "../middlewares/authmiddleware.js";
@@ -13,6 +14,9 @@ import { uploadUser } from "../middlewares/uploadMiddleware.js";
 const router = express.Router();
 
 router.get("/", protect, obtenerUsuarios);
+
+// Habilitar / deshabilitar usuario
+router.put("/:id/habilitar", protect, esAdminEmpresa, toggleUsuario);
 
 // PUT: requiere ser admin o global_admin
 router.put(

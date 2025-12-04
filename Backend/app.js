@@ -28,6 +28,9 @@ app.use("/api/users", userRoutes);
 
 app.use("/api/empresas", empresaRoutes);
 
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(` Servidor corriendo en puerto ${PORT}`));
+//const PORT = process.env.PORT || 4000;
+//app.listen(PORT, () => console.log(` Servidor corriendo en puerto ${PORT}`));
 
+app.listen(4000, '0.0.0.0', () => {
+  console.log('Backend corriendo en puerto 4000');
+});

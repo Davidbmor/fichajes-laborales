@@ -6,6 +6,7 @@ import {
   actualizarEmpresa,
   eliminarEmpresa,
   BACKEND_URL,
+  toggleEmpresaEnabled,
 } from "../api/api";
 import { useNavigate } from "react-router-dom";
 
@@ -154,6 +155,29 @@ export default function EmpresasSection() {
                   aria-label={`Editar ${e.nombre}`}
                 >
                   <i className="fas fa-pen"></i>
+                </button>
+
+                <button
+                  onClick={async (ev) => {
+                    ev.stopPropagation();
+                    const confirmar = window.confirm(
+                      e.habilitado !== false
+                        ? `Deshabilitar empresa ${e.nombre} y todos sus usuarios?`
+                        : `Habilitar empresa ${e.nombre}?`
+                    );
+                    if (!confirmar) return;
+                    try {
+                      await toggleEmpresaEnabled(token, e._id, !(e.habilitado !== false));
+                      cargarEmpresas();
+                    } catch (err) {
+                      console.error(err);
+                      alert(err.response?.data?.message || "Error cambiando estado de empresa");
+                    }
+                  }}
+                  className={`text-sm ${e.habilitado !== false ? 'text-green-600' : 'text-gray-400'}`}
+                  title={e.habilitado !== false ? 'Deshabilitar empresa' : 'Habilitar empresa'}
+                >
+                  {e.habilitado !== false ? 'Activa' : 'Deshabilitada'}
                 </button>
 
                 <button

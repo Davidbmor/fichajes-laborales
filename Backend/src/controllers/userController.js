@@ -11,13 +11,14 @@ export const obtenerUsuarios = async (req, res) => {
     let filtro = {};
 
     if (req.user.role === "admin") {
-      filtro.empresa = req.user.empresa;
+      // req.user.empresa podría ser un ObjectId o un objeto poblado; extraer el _id si es necesario
+      filtro.empresa = req.user.empresa?._id || req.user.empresa;
     }
 
     const usuarios = await User
       .find(filtro)
       .select("-password")
-      .populate("empresa", "nombre imagenUrl");
+      .populate("empresa", "nombre imagenUrl habilitado");
 
     res.json(usuarios);
 
@@ -108,6 +109,42 @@ export const crearUsuario = async (req, res) => {
   }
 };
 
+// Habilitar / deshabilitar usuario (admin de empresa o global)
+export const toggleUsuario = async (req, res) => {
+  try {
+    const { habilitado } = req.body;
+    if (typeof habilitado === "undefined") return res.status(400).json({ message: "Debe indicar 'habilitado'" });
+
+    const usuario = await User.findById(req.params.id);
+    if (!usuario) return res.status(404).json({ message: "Usuario no encontrado" });
+
+    // No permitir deshabilitar un admin global
+    if (usuario.role === "global_admin") return res.status(403).json({ message: "No se puede modificar el estado de un admin global" });
+
+    // Impedir que un admin se deshabilite a sí mismo
+    if (req.user.role === "admin" && String(req.user._id) === String(usuario._id)) {
+      return res.status(403).json({ message: "No puedes deshabilitarte a ti mismo" });
+    }
+
+    // Si el que realiza la acción es admin de empresa, asegurar que pertenece a la misma empresa
+    if (req.user.role === "admin") {
+      const usuarioEmpresaId = String(usuario.empresa || "");
+      const adminEmpresaId = String(req.user.empresa?._id || req.user.empresa || "");
+      if (usuarioEmpresaId !== adminEmpresaId) {
+        return res.status(403).json({ message: "No autorizado para modificar usuarios de otra empresa" });
+      }
+    }
+
+    usuario.habilitado = !!habilitado;
+    await usuario.save();
+
+    const usuarioSafe = await User.findById(usuario._id).select("-password").populate("empresa", "nombre imagenUrl habilitado");
+    res.json(usuarioSafe);
+  } catch (err) {
+    res.status(500).json({ message: "Error actualizando estado de usuario", error: err.message });
+  }
+};
+
 export const actualizarUsuario = async (req, res) => {
   try {
     const updates = { ...req.body };
@@ -165,9 +202,14 @@ export const eliminarUsuario = async (req, res) => {
     const usuario = await User.findById(req.params.id);
     if (!usuario) return res.status(404).json({ message: "Usuario no encontrado" });
 
-    // opcional: impedir borrar global_admin desde UI si se desea
+    // impedir borrar global_admin
     if (usuario.role === "global_admin") {
       return res.status(403).json({ message: "No se puede eliminar un admin global" });
+    }
+
+    // impedir que un admin se elimine a sí mismo
+    if (req.user.role === "admin" && String(req.user._id) === String(usuario._id)) {
+      return res.status(403).json({ message: "No puedes eliminarte a ti mismo" });
     }
 
     // borrar fichero de imagen si es local (ruta que comienza por /uploads)

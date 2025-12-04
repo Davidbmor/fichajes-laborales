@@ -5,6 +5,7 @@ const EmpresaSchema = new mongoose.Schema(
     {
         nombre: { type: String, required: true, trim: true },
         imagenUrl: { type: String, default: "" },
+        habilitado: { type: Boolean, default: true },
     },
     { timestamps: true }
 );
